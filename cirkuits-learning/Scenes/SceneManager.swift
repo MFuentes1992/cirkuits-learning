@@ -25,6 +25,14 @@ class SceneManager: SceneProtocol {
         
     }
     
+    func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        self.currentScene.handlePanGesture(gesture: gesture, location: location)
+    }
+    
+    func handlePinchGesture(gesture: UIPinchGestureRecognizer) {
+        self.currentScene.handlePinchGesture(gesture: gesture)
+    }
+    
     func encode(encoder: any MTLRenderCommandEncoder) {
         self.currentScene.encode(encoder: encoder)
     }

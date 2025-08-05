@@ -23,6 +23,14 @@ class Renderer:NSObject, MTKViewDelegate {
         
     }
     
+    func handlePanEvents(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        sceneManager.handlePanGesture(gesture: gesture, location: location)
+    }
+    
+    func handlePinchEvents(gesture: UIPinchGestureRecognizer) {
+        sceneManager.handlePinchGesture(gesture: gesture)
+    }
+    
     func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,
               let descriptor = view.currentRenderPassDescriptor else { return }
