@@ -12,10 +12,10 @@ class Plain: Renderable {
     var _pipelineState: MTLRenderPipelineState!
     
     var vertices: [Vertex] = [
-        Vertex(position: SIMD3(-1, 1, 0), color: SIMD4(1, 0, 0, 1)),
-        Vertex(position: SIMD3(-1, -1, 0), color: SIMD4(0, 1, 0, 1)),
-        Vertex(position: SIMD3(1, -1, 0), color: SIMD4(0, 0, 1, 1)),
-        Vertex(position: SIMD3(1, 1, 0), color: SIMD4(1, 0, 1, 1)),
+        Vertex(position: SIMD3(-1, 1, 1), color: SIMD4(1, 0, 0, 1)),
+        Vertex(position: SIMD3(-1, -1, 1), color: SIMD4(0, 1, 0, 1)),
+        Vertex(position: SIMD3(1, -1, 1), color: SIMD4(0, 0, 1, 1)),
+        Vertex(position: SIMD3(1, 1, 1), color: SIMD4(1, 0, 1, 1)),
     ]
     
     var indices: [UInt16] = [
