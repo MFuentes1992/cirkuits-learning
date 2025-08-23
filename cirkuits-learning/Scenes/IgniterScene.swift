@@ -9,44 +9,27 @@ import simd
 import MetalKit
 
 class IgniterScene: SceneProtocol {
-    
-    var plain: Plain!
-    var letter: Letter!
+    var scrambler: Scrambler!
+    var cameraSettings: CameraSettings!
+    var camera: Camera!
     var device: MTLDevice!
 
     var meshPipeLine: MTLRenderPipelineState!
-    var plainPipeLine: MTLRenderPipelineState!
-    var cameraPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
-     // -- Camera setup
-    var modelMatrix: simd_float4x4
-    var viewMatrix: simd_float4x4
-    var aspectRatio: Float
-    var projectionMatrix: simd_float4x4
-    
+
     init(device: MTLDevice) {
         self.device = device
-        plain = Plain(device: device)
-        plainPipeLine = makeDefaultRenderPipeline(device: device, vertexName: "vertex_shader", fragmentName: "fragment_shader")
-        plain.setPipeLineState(pipeLineState: plainPipeLine)
+        cameraSettings = CameraSettings(
+            eye: SIMD3<Float>(0,0,100),
+            center: SIMD3<Float>(0,0,0),
+            up: SIMD3<Float>(0,1,0),
+            fovDegrees: 60.0,
+            aspectRatio: 19.5/9,
+            nearZ: 1.0,
+            farZ: 1000.0)
         
-        // -- Camera setup
-        modelMatrix = rotationMatrixX(degrees: 0)
-        viewMatrix = makeLookAtMatrix(
-            eye: SIMD3(0, 0, 100),       // cámara en Z+
-            center: SIMD3(0, 0, 0),      // mirando al origen
-            up: SIMD3(0, 1, 0)           // eje Y hacia arriba
-        )
-        aspectRatio = Float(19.5/9)
-        projectionMatrix = makePerspectiveMatrix(fovY: radians_from_degrees(60),aspect: aspectRatio,
-                                                     nearZ: 1.0,
-                                                     farZ: 1000.0)
-        let mvpMatrix = projectionMatrix * viewMatrix * modelMatrix
-        
-        // -- 3D model pipeline
-        letter = Letter(letter: "o", device: device, modelViewProjectionMatrix: mvpMatrix, modelMatrix: modelMatrix)
-        meshPipeLine = makeObjectRenderPipeline(device: device, vertexName: "obj_vertex_shader", fragmentName: "obj_fragment_shader")
-        letter.setPipeLineState(pipeLineState: meshPipeLine)
+        camera = Camera(settings: cameraSettings)
+        scrambler = Scrambler(word: "WORLD", device: device, camera: camera)
     }
     
         
@@ -68,13 +51,7 @@ class IgniterScene: SceneProtocol {
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
-        letter.encode(encoder: encoder)
-        // -- Plain
-        // plain.encode(encoder: encoder)
-        // -- Letter H
-        
-        
+        scrambler.encode(encoder: encoder)
     }
-    
     
 }

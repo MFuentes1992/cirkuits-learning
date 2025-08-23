@@ -55,6 +55,6 @@ func rotationMatrixX(degrees: Float) -> simd_float4x4 {
         SIMD4(1,    0,     0, 0),
         SIMD4(0, cosA, -sinA, 0),
         SIMD4(0, sinA,  cosA, 0),
-        SIMD4(20,    15,     0, 1)
+        SIMD4(0,    0,     0, 1)
     )
 }
