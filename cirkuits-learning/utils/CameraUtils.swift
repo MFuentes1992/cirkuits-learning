@@ -42,7 +42,7 @@ func makeTranslationMatrix(x: Float, y: Float, z: Float) -> simd_float4x4 {
 }
 
 func radians_from_degrees(_ degrees: Float) -> Float {
-    return (degrees / 180) * .pi
+    return (degrees * Float.pi) / 180.0
 }
 
 
@@ -57,4 +57,19 @@ func rotationMatrixX(degrees: Float) -> simd_float4x4 {
         SIMD4(0, sinA,  cosA, 0),
         SIMD4(0,    0,     0, 1)
     )
+}
+
+func makeModelMatrix(position: SIMD3<Float>,
+                     rotation: SIMD3<Float>,
+                     scale: SIMD3<Float>) -> float4x4 {
+    
+    let translation = float4x4(translation: position)
+    let scaling     = float4x4(scaling: scale)
+    
+    let rotationX   = float4x4(rotationX: rotation.x)
+    let rotationY   = float4x4(rotationY: rotation.y)
+    let rotationZ   = float4x4(rotationZ: rotation.z)
+    
+    // Orden típico: T * Rz * Ry * Rx * S
+    return translation * rotationZ * rotationY * rotationX * scaling
 }

@@ -4,11 +4,13 @@
 //
 //  Created by Marco Fuentes Jiménez on 19/07/25.
 //
+import simd
 import MetalKit
 
 class Plain: Renderable {
     var vertexBuffer: MTLBuffer!
     var indexBuffer: MTLBuffer!
+    var _modelMatrix: float4x4!
     var _pipelineState: MTLRenderPipelineState!
     
     var vertices: [Vertex] = [
@@ -39,6 +41,10 @@ class Plain: Renderable {
     func buildBuffers(device: MTLDevice) {
         vertexBuffer = device.makeBuffer(bytes: vertices, length: MemoryLayout<Vertex>.stride * vertices.count, options: [])
         indexBuffer = device.makeBuffer(bytes: indices, length: MemoryLayout<UInt16>.size * indices.count, options: [])
+    }
+    
+    var modelMatrix: float4x4 {
+        return _modelMatrix
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {

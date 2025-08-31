@@ -18,7 +18,6 @@ protocol CameraProtocol {
     
     var cameraSettings: CameraSettings { get }
     var viewMatrix: simd_float4x4 { get }
-    var modelMatrix: simd_float4x4 { get }
     var projectionMatrix: simd_float4x4 { get }
     
     
@@ -29,5 +28,6 @@ protocol CameraProtocol {
     mutating func fly(up: Bool, down: Bool)
     mutating func pitch(up: Bool, down: Bool)
     mutating func yaw(left: Bool, right: Bool)
+    func calculateScreenLimits(at distance: Float) -> (xMin:Float, xMax:Float, yMin:Float, yMax:Float)
     
 }

@@ -17,29 +17,33 @@ class Scrambler {
     init(word: String, device: MTLDevice, camera: Camera ) {
         let center = word.count/2
         let normWord = word.lowercased()
-        let gap: Float = 21.0
+        let gap: Float = 10
+        var lastLeftPosition: Float = 0.0
+        var lastRightPosition: Float = 0.0
         self.camera = camera
         var j: Int = center
-        var k: Int = center
-        var lModelMatrix = camera.modelMatrix
-        var rModelMatrix = camera.modelMatrix
+        var k: Int = center + 1
         
         let pipeline = makeObjectRenderPipeline(device: device, vertexName: "obj_vertex_shader", fragmentName: "obj_fragment_shader")
-        for i in 0...(word.count / 2) {
-            lModelMatrix.columns.3 = SIMD4(Float(i) * -gap, 0.0, 0, 1.0)
-            rModelMatrix.columns.3 = SIMD4(Float(k - center) * gap, 0.0, 0, 1.0)
-            let lMvpMatrix = camera.projectionMatrix * camera.viewMatrix * lModelMatrix
-            let rMvpMatrix = camera.projectionMatrix * camera.viewMatrix * rModelMatrix
-            
+        for _ in 0...(word.count / 2) {
+            // -- Left letters
+            let lModelMatrix = makeModelMatrix(position: SIMD3(lastLeftPosition, 0, 0), rotation: SIMD3(0, 0, 0), scale: SIMD3(1, 1, 1))
             let lLetter = Letter(letter: String(normWord.dropFirst(j).prefix(1)),
-                                device: device, modelViewProjectionMatrix: lMvpMatrix, modelMatrix: lModelMatrix)
+                                 device: device, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix,modelMatrix: lModelMatrix)
+            // -- Right letters
+            if(lastRightPosition == 0) {
+                lastRightPosition = lLetter.width + gap
+            }
+                
+            let rModelMatrix = makeModelMatrix(position: SIMD3(lastRightPosition, 0, 0), rotation: SIMD3(0, 0, 0), scale: SIMD3(1, 1, 1))
             let rLetter = Letter(letter: String(normWord.dropFirst(k).prefix(1)),
-                                device: device, modelViewProjectionMatrix: rMvpMatrix, modelMatrix: rModelMatrix)
+                                device: device, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix,modelMatrix: rModelMatrix)
             lLetter.setPipeLineState(pipeLineState: pipeline)
             rLetter.setPipeLineState(pipeLineState: pipeline)
+            lastLeftPosition = lastLeftPosition - Float(lLetter.width) - gap
+            lastRightPosition = lastRightPosition + Float(rLetter.width) + gap
             letters.append(lLetter)
             letters.append(rLetter)
-            print("\(Float(i) * -gap) \(j) \(k)")
             j = max(0, j - 1)
             k = min(word.count - 1, k + 1)
         }

@@ -30,9 +30,11 @@ class IgniterScene: SceneProtocol {
         
         camera = Camera(settings: cameraSettings)
         scrambler = Scrambler(word: "WORLD", device: device, camera: camera)
+        print("Camera bounds: \(camera.calculateScreenLimits(at: 100.0))")
     }
     
-        
+    
+    
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
         if gesture.state == .began {
             lastPanLocation = location

@@ -7,7 +7,10 @@
 import MetalKit
 
 class ObjLoader {
-    static func loadMesh(from url: URL, device: MTLDevice) -> Mesh? {
+    static func loadMesh(from url: URL, device: MTLDevice) -> (Mesh, minX: Float, maxX: Float) {
+        var minX: Float = .greatestFiniteMagnitude
+        var maxX: Float = -.greatestFiniteMagnitude
+        
         var positions: [SIMD3<Float>] = []
         var normals: [SIMD3<Float>] = []
         var indices: [UInt16] = []
@@ -26,6 +29,12 @@ class ObjLoader {
                 let y = Float(tokens[2])!
                 let z = Float(tokens[3])!
                 positions.append(SIMD3<Float>(x, y, z))
+                if x < minX {
+                    minX = x
+                }
+                if x > maxX {
+                    maxX = x
+                }
             case "vn":
                 let x = Float(tokens[1])!
                 let y = Float(tokens[2])!
@@ -57,8 +66,8 @@ class ObjLoader {
                                             length: MemoryLayout<UInt16>.stride * indices.count,
                                             options: [])
 
-        return Mesh(vertexBuffer: vertexBuffer!,
+        return (Mesh(vertexBuffer: vertexBuffer!,
                     indexBuffer: indexBuffer!,
-                    indexCount: indices.count)
+                    indexCount: indices.count), minX, maxX)
     }
 }

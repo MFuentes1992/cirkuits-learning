@@ -58,11 +58,7 @@ class Camera: CameraProtocol {
         )
 
     }
-    
-    var modelMatrix: simd_float4x4 {
-        return rotationMatrixX(degrees: 0)
-    }
-    
+        
     var projectionMatrix: simd_float4x4 {
         return makePerspectiveMatrix(
             fovY: radians_from_degrees(settings.fovDegrees),
@@ -85,6 +81,21 @@ class Camera: CameraProtocol {
     
     func lookAt(x: Float, y: Float, z: Float) {
         settings.center = SIMD3<Float>(x: x, y: y, z: z)
+    }
+    
+    func calculateScreenLimits(at distance: Float) -> (xMin: Float, xMax: Float, yMin: Float, yMax: Float) {
+        let fovRadians = radians_from_degrees(self.settings.fovDegrees)
+        let halfHeight = distance * tan(fovRadians / 2.0)
+        
+        let halfWidth = halfHeight * self.settings.aspectRatio
+        
+        return (
+            xMin: -halfWidth,
+            xMax: halfWidth,
+            yMin: -halfHeight,
+            yMax: halfHeight
+        )
+        
     }
 
     
