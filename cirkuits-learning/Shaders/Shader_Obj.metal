@@ -22,6 +22,12 @@ struct Uniforms {
     float3 cameraPosition;
 };
 
+struct TimeUniforms {
+    float time;
+    float zoomAmount;
+    float zoomSpeed;
+};
+
 struct VertexOut {
     float4 position [[position]];
     float3 normal;
@@ -30,8 +36,11 @@ struct VertexOut {
 
 // -- Camera is always after uniforms buffer!!
 vertex VertexOut obj_vertex_shader(const VertexIn in [[stage_in]],
-                                         constant Uniforms& uniforms [[buffer(1)]]) {
+                                   constant Uniforms& uniforms [[buffer(1)]] ) {
     VertexOut out;
+    
+    // float animatedZoom = 1.0 + tUniforms.zoomAmount * cos(tUniforms.time * tUniforms.zoomSpeed);
+    // float4 pos = float4(in.position * animatedZoom, 1.0);
     float4 pos = float4(in.position, 1.0);
     out.position = uniforms.modelViewProjectionMatrix * pos;
     out.normal = in.normal;

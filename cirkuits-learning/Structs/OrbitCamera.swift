@@ -30,6 +30,7 @@ struct OrbitCamera {
     }
 
     func viewMatrix() -> float4x4 {
-        return float4x4(lookAt: position(), target: target, up: SIMD3<Float>(0, 1, 0))
+        return float4x4(translation: SIMD3<Float>(0, 0, 0))
+        // return float4x4(lookAt: position(), target: target, up: SIMD3<Float>(0, 1, 0))
     }
 }

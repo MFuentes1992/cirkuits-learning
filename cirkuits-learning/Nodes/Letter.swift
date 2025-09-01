@@ -14,6 +14,7 @@ class Letter: Renderable {
     var maxX: Float = 0
     var width: Float { return maxX - minX }
     var uniforms: Uniforms!
+    let animationController: AnimationController = AnimationController()
     var _modelMatrix: float4x4!
     var uniformBuffer: MTLBuffer!
     var _pipeLineState: MTLRenderPipelineState!
@@ -61,9 +62,13 @@ class Letter: Renderable {
     }
         
     func encode(encoder: any MTLRenderCommandEncoder) {
+        // animationController.updateUniforms(currentTime: CACurrentMediaTime())
+        // var tUniforms = animationController.getUniforms()
+        
         encoder.setRenderPipelineState(_pipeLineState)
         encoder.setVertexBuffer(mesh.vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
+        // encoder.setVertexBytes(&tUniforms, length: MemoryLayout<TimeUniforms>.stride, index: 2)
         encoder.drawIndexedPrimitives(type: .triangle,
                                             indexCount: mesh.indexCount,
                                             indexType: .uint16,

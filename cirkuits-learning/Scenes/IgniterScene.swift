@@ -12,6 +12,7 @@ class IgniterScene: SceneProtocol {
     var scrambler: Scrambler!
     var cameraSettings: CameraSettings!
     var camera: Camera!
+    // let animationController: AnimationController! = AnimationController()
     var device: MTLDevice!
 
     var meshPipeLine: MTLRenderPipelineState!
@@ -29,7 +30,7 @@ class IgniterScene: SceneProtocol {
             farZ: 1000.0)
         
         camera = Camera(settings: cameraSettings)
-        scrambler = Scrambler(word: "WORLD", device: device, camera: camera)
+        scrambler = Scrambler(word: "AUSCHLESEN", device: device, camera: camera)
         print("Camera bounds: \(camera.calculateScreenLimits(at: 100.0))")
     }
     
@@ -53,6 +54,9 @@ class IgniterScene: SceneProtocol {
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
+        // animationController.updateUniforms(currentTime: CACurrentMediaTime())
+        // var timeUniforms = animationController.getUniforms()
+        // encoder.setVertexBytes(&timeUniforms, length: MemoryLayout<TimeUniforms>.stride, index: 2)
         scrambler.encode(encoder: encoder)
     }
     
