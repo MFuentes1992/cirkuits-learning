@@ -10,5 +10,4 @@ struct Mesh {
     let vertexBuffer: MTLBuffer
     let indexBuffer: MTLBuffer
     let indexCount: Int
-
 }

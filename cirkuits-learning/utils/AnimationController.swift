@@ -17,6 +17,11 @@ struct TimeUniforms {
 class AnimationController {
     private var startTime: CFTimeInterval?
     private var uniforms = TimeUniforms(time: 0, zoomAmount: 0.5, zoomSpeed: 1.0)
+  
+    init (zoomAmount: Float, zoomSpeed: Float) {
+        uniforms.zoomAmount = zoomAmount
+        uniforms.zoomSpeed = zoomSpeed
+    }
     
     func updateUniforms(currentTime: CFTimeInterval) {
         if startTime == nil {

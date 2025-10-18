@@ -9,10 +9,11 @@ import simd
 
 class Scrambler {
     
-    var letters: Array<Letter> = [];
+   /* var letters: Array<Letter> = [];
     var letterB: Letter!
     var camera: Camera!
     var word: String!
+    var zoom:Float = 0.01
     
     init(word: String, device: MTLDevice, camera: Camera ) {
         let center = word.count/2
@@ -27,7 +28,7 @@ class Scrambler {
         let pipeline = makeObjectRenderPipeline(device: device, vertexName: "obj_vertex_shader", fragmentName: "obj_fragment_shader")
         for _ in 0...(word.count / 2) {
             // ----- Left letters
-            let lModelMatrix = makeModelMatrix(position: SIMD3(lastLeftPosition, 0, 0), rotation: SIMD3(0, 0, 0), scale: SIMD3(1, 1, 1))
+            let lModelMatrix = makeModelMatrix(position: SIMD3(lastLeftPosition, 0, 0), rotation: SIMD3(0, 0, 0), scale: SIMD3(0.5, 0.5, 0.5    ))
             let lLetter = Letter(letter: String(normWord.dropFirst(j).prefix(1)),
                                  device: device, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix,modelMatrix: lModelMatrix)
             
@@ -53,13 +54,16 @@ class Scrambler {
                 k = k + 1
             }
         }
-        
+        print("Left add up: \(lastLeftPosition)")
+        print("Right add up: \(lastRightPosition)")
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
+        encoder.setVertexBytes(&zoom, length: MemoryLayout<Float>.size, index: 2)
         for letter in letters {
             letter.encode(encoder: encoder)
         }
-    }
+        
+    } */
     
 }

@@ -49,7 +49,7 @@ class ViewController: UIViewController {
         // metalView.depthStencilPixelFormat = .depth32Float
         view.addSubview(metalView)
 
-        renderer = Renderer(device: metalView.device)
+        renderer = Renderer(device: metalView.device, view: metalView)
         metalView.delegate = renderer
         print("App -> loaded!")
         // Gestos

@@ -9,7 +9,9 @@ import simd
 import MetalKit
 
 class IgniterScene: SceneProtocol {
-    var scrambler: Scrambler!
+    // var scrambler: Scrambler!
+    // var wordLayoutConfig: WordLayoutConfig!
+    var wordRenderer: WordRenderer!
     var cameraSettings: CameraSettings!
     var camera: Camera!
     // let animationController: AnimationController! = AnimationController()
@@ -18,7 +20,7 @@ class IgniterScene: SceneProtocol {
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
 
-    init(device: MTLDevice) {
+    init(device: MTLDevice, view: MTKView) {
         self.device = device
         cameraSettings = CameraSettings(
             eye: SIMD3<Float>(0,0,100),
@@ -30,8 +32,14 @@ class IgniterScene: SceneProtocol {
             farZ: 1000.0)
         
         camera = Camera(settings: cameraSettings)
-        scrambler = Scrambler(word: "AUSCHLESEN", device: device, camera: camera)
-        print("Camera bounds: \(camera.calculateScreenLimits(at: 100.0))")
+        // wordLayoutConfig = WordLayoutConfig(screenWidth:Float(view.bounds.width))
+        // wordLayoutManager = WordLayoutManager(config: wordLayoutConfig)
+        // wordLayoutManager.setWord(word: "world")
+        // scrambler = Scrambler(word: "Antidisestablishmentarianism", device: device, camera: camera)
+        // print("Camera bounds: \(camera.calculateScreenLimits(at: 100.0))")
+        
+        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
+        wordRenderer.setWord("hola mundo")
     }
     
     
@@ -57,7 +65,9 @@ class IgniterScene: SceneProtocol {
         // animationController.updateUniforms(currentTime: CACurrentMediaTime())
         // var timeUniforms = animationController.getUniforms()
         // encoder.setVertexBytes(&timeUniforms, length: MemoryLayout<TimeUniforms>.stride, index: 2)
-        scrambler.encode(encoder: encoder)
+        // scrambler.encode(encoder: encoder)
+        wordRenderer.update(deltaTime: 1.0/60.0)
+        wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
     
 }
