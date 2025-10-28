@@ -33,11 +33,22 @@ class ViewController: UIViewController {
     } */
     
     var metalView: MTKView!
+    var timerLabel: UILabel!
+    var scoreLabel: UILabel!
+    var timeRemaining: TimeInterval = 60.0
+    var gameTimer: Timer?
+    
     var renderer: Renderer!
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
+        setupMetalView()
+        setupHUD()
+        startTimer()
+    }
+    
+    func setupMetalView() {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal no es compatible con este dispositivo")
         }
@@ -55,6 +66,59 @@ class ViewController: UIViewController {
         // Gestos
         view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(handlePan)))
         view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(handlePinch)))
+    }
+    
+    func setupHUD() {
+        timerLabel = UILabel()
+        timerLabel.font = .monospacedSystemFont(ofSize: 48, weight: .bold)
+        timerLabel.textColor = .gray
+        timerLabel.shadowColor = .darkGray
+        timerLabel.shadowOffset = CGSize(width: 2, height: 2)
+        timerLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(timerLabel)
+        
+        // Score label
+        scoreLabel = UILabel()
+        scoreLabel.font = .monospacedSystemFont(ofSize: 32, weight: .bold)
+        scoreLabel.textColor = .yellow
+        scoreLabel.shadowColor = .black
+        scoreLabel.shadowOffset = CGSize(width: 2, height: 2)
+        scoreLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scoreLabel)
+        
+        // Constraints
+        NSLayoutConstraint.activate([
+            timerLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            timerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            
+            scoreLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            scoreLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+        ])
+        updateTimerDisplay()
+    }
+    
+    func startTimer() {
+        gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {
+            [weak self] _ in
+                        self?.updateTimer()
+        }
+    }
+    
+    func updateTimer() {
+        timeRemaining -= 0.1
+        if timeRemaining <= 0 {
+            timeRemaining = 0
+            gameTimer?.invalidate()
+            
+        }
+        updateTimerDisplay()
+    }
+    
+    func updateTimerDisplay() {
+        let minutes = Int(timeRemaining / 60)
+        let seconds = Int(timeRemaining) % 60
+        let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
+        timerLabel.text = formattedTimerString
     }
     
     @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
