@@ -16,13 +16,11 @@ struct VertexIn {
 };
 
 struct Uniforms {
-    // float4x4 modelViewProjectionMatrix;
     float4x4 projectionMatrix;
     float4x4 viewMatrix;
     float4x4 modelMatrix;
     float3 lightPosition;
     float3 cameraPosition;
-    float visibility;
 };
 
 struct TimeUniforms {
@@ -35,7 +33,6 @@ struct VertexOut {
     float4 position [[position]];
     float3 normal;
     float3 worldPosition;
-    float visibility;
 };
 
 // -- Camera is always after uniforms buffer!!
@@ -53,7 +50,6 @@ vertex VertexOut obj_vertex_shader(const VertexIn in [[stage_in]],
     out.position = mvpMatrix * pos;
     out.normal = in.normal;
     out.worldPosition = (u.modelMatrix * pos).xyz;
-    out.visibility = uniforms[instanceID].visibility;
     return out;
 }
 
@@ -64,11 +60,6 @@ fragment float4 obj_fragment_shader(VertexOut in [[stage_in]]) {
 
     float3 baseColor = float3(0, 0.647, 1.0); // Dorado
     float3 ambient = 0.3 * baseColor;
-    float3 diffuse = diff * baseColor;
-
-    if(in.visibility < 0.01) {
-        discard_fragment();
-    }
-    
+    float3 diffuse = diff * baseColor;    
     return float4(ambient + diffuse, 1.0);
 }

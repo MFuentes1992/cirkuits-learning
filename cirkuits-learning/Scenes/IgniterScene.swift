@@ -30,7 +30,7 @@ class IgniterScene: SceneProtocol {
         
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
-        wordRenderer.setWord("Hello World my name is marco")
+        wordRenderer.setWord("Quite a long word to test the rendering")
     }
     
     
@@ -52,7 +52,6 @@ class IgniterScene: SceneProtocol {
     
     func encode(encoder: any MTLRenderCommandEncoder) {
         wordRenderer.update(deltaTime: 1.0/60.0)
-        // wordRenderer.update(deltaTime: 0.0)
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
     

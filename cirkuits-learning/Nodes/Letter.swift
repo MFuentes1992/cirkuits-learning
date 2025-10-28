@@ -15,7 +15,6 @@ class Letter {
     var width: Float { return bbRightX - bbLeftX }
     var uniformBuffer: MTLBuffer!
     var transform: simd_float4x4 = matrix_identity_float4x4
-    var visibility: Float = 1
 
     init(letter: String, device: MTLDevice) {
         if(letter == " ") { return }

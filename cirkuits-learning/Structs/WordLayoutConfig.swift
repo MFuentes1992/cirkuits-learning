@@ -8,24 +8,23 @@
 struct WordLayoutConfig {
     let screenWidth: Float
     let maxLinearWidth: Float
+    let letterWidth: Float
     let letterSpacing: Float
-    let circleRadiusMultiplier: Float
-    let rotationSpeed: Float
+    let speed: Float
     let blankSpaceWidth: Float
-    let circumferenceRadBounds: Float
+    let startingPoint: Float = 0.0
     
     init(screenWidth: Float,
-         maxWidthPercentage: Float = 0.8,
+         maxWidthPercentage: Float = 0.6,
          letterSpacing: Float = 2.5,
-         circleRadiusMultiplier: Float = 1,
-         rotationSpeed: Float = 0.3,
+         letterWidth: Float = 15,
+         speed: Float = 0.8,
          blankSpaceWidth: Float = 10) {
         self.screenWidth = screenWidth
         self.maxLinearWidth = screenWidth * maxWidthPercentage
         self.letterSpacing = letterSpacing
-        self.circleRadiusMultiplier = circleRadiusMultiplier
-        self.rotationSpeed = rotationSpeed
+        self.speed = speed
         self.blankSpaceWidth = blankSpaceWidth
-        self.circumferenceRadBounds = .pi * 0.25 // -- Camera is facing at 0deg - bounds are at -30deg and 30deg
+        self.letterWidth = letterWidth
     }
 }
