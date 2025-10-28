@@ -17,10 +17,12 @@ class WordLayoutManager {
     private var config: WordLayoutConfig
     private var device: MTLDevice!
     private var currentLayoutMode: LayoutMode = .linear
-    private var slideDirection: Float = -1.0
+    private var slideDirection: Float = 1.0
     private var layoutBondingBox: CGRect!
     private var time: Float = 0.0
     private var shouldAnimateLayout: Bool = false
+    private var acceleration: Float = 0.0
+    private var animationAmout: Float = 0.0
     
     init (config: WordLayoutConfig, device: MTLDevice) {
         self.config = config
@@ -64,7 +66,7 @@ class WordLayoutManager {
             shouldAnimateLayout = true
         }
         
-        layoutBondingBox = CGRect(x: CGFloat(initialPositionX), y: 0, width: CGFloat(totalWidth), height: 0.0)
+        layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
         for letter in letters {
             if(letter.mesh == nil) {
                 currentX += config.blankSpaceWidth
@@ -85,10 +87,22 @@ class WordLayoutManager {
             return
         }
         time += deltaTime * config.speed
+        acceleration = abs(cos(time))
+        animationAmout = (acceleration * slideDirection)
         for i in 0..<letters.count {
             var transform = letters[i].transform
-            transform.columns.3.x += cos(time)
+            transform.columns.3.x += animationAmout
             letters[i].transform = transform
+        }
+        layoutBondingBox.origin.x += CGFloat(animationAmout)
+        
+        // -- 0 is the middle point in z,y,z coodinate system
+        if(layoutBondingBox.origin.x > 0) {
+            slideDirection = -1
+        }
+        
+        if(layoutBondingBox.origin.x + layoutBondingBox.width < 0) {
+            slideDirection = 1
         }
     }
 }

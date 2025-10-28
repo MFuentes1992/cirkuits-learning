@@ -18,7 +18,7 @@ struct WordLayoutConfig {
          maxWidthPercentage: Float = 0.6,
          letterSpacing: Float = 2.5,
          letterWidth: Float = 15,
-         speed: Float = 0.8,
+         speed: Float = 1.5,
          blankSpaceWidth: Float = 10) {
         self.screenWidth = screenWidth
         self.maxLinearWidth = screenWidth * maxWidthPercentage
