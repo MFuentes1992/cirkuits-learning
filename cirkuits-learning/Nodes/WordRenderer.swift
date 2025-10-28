@@ -54,7 +54,8 @@ class WordRenderer {
                 viewMatrix: viewMatrix,
                 modelMatrix: transform,
                 lightPosition: SIMD3<Float>(0, 0, 10),
-                cameraPosition: SIMD3<Float>(0, 0, 500)
+                cameraPosition: SIMD3<Float>(0, 0, 500),
+                visibility: 1.0
             )
         }
             
@@ -64,6 +65,7 @@ class WordRenderer {
             if(letter.mesh == nil){
                 continue
             }
+            uniformsPointer[index].visibility = letter.visibility
             encoder.setVertexBuffer(letter.mesh.vertexBuffer, offset: 0, index: 0)
             encoder.drawIndexedPrimitives(type: .triangle,
                                             indexCount: letter.mesh.indexCount,

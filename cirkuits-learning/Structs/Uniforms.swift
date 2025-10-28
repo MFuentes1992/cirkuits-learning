@@ -13,4 +13,5 @@ struct Uniforms {
     var modelMatrix: simd_float4x4
     var lightPosition: SIMD3<Float>
     var cameraPosition: SIMD3<Float>
+    var visibility: Float
 }

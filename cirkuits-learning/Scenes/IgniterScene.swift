@@ -9,12 +9,9 @@ import simd
 import MetalKit
 
 class IgniterScene: SceneProtocol {
-    // var scrambler: Scrambler!
-    // var wordLayoutConfig: WordLayoutConfig!
     var wordRenderer: WordRenderer!
     var cameraSettings: CameraSettings!
     var camera: Camera!
-    // let animationController: AnimationController! = AnimationController()
     var device: MTLDevice!
 
     var meshPipeLine: MTLRenderPipelineState!
@@ -32,14 +29,8 @@ class IgniterScene: SceneProtocol {
             farZ: 1000.0)
         
         camera = Camera(settings: cameraSettings)
-        // wordLayoutConfig = WordLayoutConfig(screenWidth:Float(view.bounds.width))
-        // wordLayoutManager = WordLayoutManager(config: wordLayoutConfig)
-        // wordLayoutManager.setWord(word: "world")
-        // scrambler = Scrambler(word: "Antidisestablishmentarianism", device: device, camera: camera)
-        // print("Camera bounds: \(camera.calculateScreenLimits(at: 100.0))")
-        
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
-        wordRenderer.setWord("hola mundo")
+        wordRenderer.setWord("Hello World my name is marco")
     }
     
     
@@ -49,24 +40,19 @@ class IgniterScene: SceneProtocol {
             lastPanLocation = location
         } else if gesture.state == .changed {
             let delta = CGPoint(x: location.x - lastPanLocation.x, y: location.y - lastPanLocation.y)
-            // orbitCamera.rotate(deltaTheta: Float(delta.x) * 0.005, deltaPhi: Float(delta.y) * 0.005)
             lastPanLocation = location
         }
     }
     
     func handlePinchGesture(gesture: UIPinchGestureRecognizer) {
         if gesture.state == .changed {
-            // orbitCamera.zoom(delta: Float(1 - gesture.scale) * 2.0)
             gesture.scale = 1.0
         }
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
-        // animationController.updateUniforms(currentTime: CACurrentMediaTime())
-        // var timeUniforms = animationController.getUniforms()
-        // encoder.setVertexBytes(&timeUniforms, length: MemoryLayout<TimeUniforms>.stride, index: 2)
-        // scrambler.encode(encoder: encoder)
         wordRenderer.update(deltaTime: 1.0/60.0)
+        // wordRenderer.update(deltaTime: 0.0)
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
     

@@ -5,6 +5,7 @@
 //  Created by Marco Fuentes Jiménez on 07/09/25.
 //
 import MetalKit
+import simd
 
 enum LayoutMode {
     case linear
@@ -17,6 +18,8 @@ class WordLayoutManager {
     private var device: MTLDevice!
     private var currentLayoutMode: LayoutMode = .linear
     private var rotationAngle: Float = 0.0
+    private var rotationDirection: Float = -1.0
+    private var startingAngle: Float = 0.0
     
     init (config: WordLayoutConfig, device: MTLDevice) {
         self.config = config
@@ -43,7 +46,7 @@ class WordLayoutManager {
     
     func update(deltaTime: Float) {
         if case .circular = currentLayoutMode {
-            rotationAngle += config.rotationSpeed * deltaTime
+            rotationAngle += config.rotationSpeed * deltaTime * rotationDirection
             updateLetterTransforms()
         }
     }
@@ -88,7 +91,7 @@ class WordLayoutManager {
         
         // Calculate radius based on total arc length
         // We want the arc to subtend a reasonable angle  (like 120-180 degrees max)
-        let maxAngle: Float = .pi * 0.75 // 135 degrees
+        let maxAngle: Float = .pi * 0.4 // 135 degrees
         let minRadius = totalArcLength / maxAngle
         
         // Apply multiplier for better visual spacing
@@ -116,15 +119,17 @@ class WordLayoutManager {
             letter.transform = transform
             currentX += letter.width + config.letterSpacing            
             
-            print("letter width: \(letter.width), letter bbx: \(letter.maxX) centre: \(currentX)")
+            print("letter width: \(letter.width), letter bbx: \(letter.bbRightX) centre: \(currentX)")
         }
     }
     
     private func updateCircularTransforms(radius: Float, totalAngle: Float) {
         // Calculate individual letter positions on the circle
         let letterArcLengths = letters.map { $0.width + config.letterSpacing }
+        // let totalArcLength = letterArcLengths.reduce(0, +)
+        // var currentAngle: Float = -totalAngle * 0.5 // Start from left side
+        var currentAngle: Float = 0
         
-        var currentAngle: Float = -totalAngle * 0.5 // Start from left side
         
         for i in 0..<letters.count {
             let letter = letters[i]
@@ -133,6 +138,16 @@ class WordLayoutManager {
             // Position at the center of this letter's arc
             let letterCenterAngle = currentAngle + (letterArcLength / radius) * 0.5
             let finalAngle = letterCenterAngle + rotationAngle
+            startingAngle += rotationAngle
+            
+            if(i == 0 && finalAngle > config.circumferenceRadBounds) {
+             rotationDirection = -1
+             }
+             
+             if(i == letters.count - 1 && finalAngle < -(config.circumferenceRadBounds) && rotationDirection < 0) {
+                 rotationDirection = 1
+                 print("StartingAngle: \(startingAngle) finalAngle: \(finalAngle) rotationDirection: \(rotationDirection) config.circumferenceRadBounds: \(config.circumferenceRadBounds)")
+             }
             
             // Calculate position on circle
             let x = radius * sin(finalAngle)
@@ -158,7 +173,16 @@ class WordLayoutManager {
             
             letters[i].transform = transform
             currentAngle += letterArcLength / radius
+            
+            
+            /* if(startingAngle < config.circumferenceRadBounds - (totalAngle * 0.5)) {
+                rotationDirection = 1
+            }
+            
+            if(startingAngle > config.circumferenceRadBounds + (totalAngle * 0.5)) {
+                rotationDirection = -1
+            } */
         }
+        // print("starting Angle \(startingAngle)")
     }
-    
 }
