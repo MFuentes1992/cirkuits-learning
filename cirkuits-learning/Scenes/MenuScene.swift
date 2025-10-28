@@ -10,4 +10,11 @@ class MenuScene: SceneProtocol {
     func encode(encoder: any MTLRenderCommandEncoder) {
         
     }
+    func handlePinchGesture(gesture: UIPinchGestureRecognizer) {
+        
+    }
+    
+    func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        
+    }
 }

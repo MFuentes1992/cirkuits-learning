@@ -5,23 +5,59 @@
 //  Created by Marco Fuentes Jiménez on 19/07/25.
 //
 
+import simd
 import MetalKit
 
 class IgniterScene: SceneProtocol {
-    var plain: Plain!
+    var wordRenderer: WordRenderer!
+    var cameraSettings: CameraSettings!
+    var camera: Camera!
     var device: MTLDevice!
-    var plainPipeLine: MTLRenderPipelineState!
-    
-    init(device: MTLDevice) {
+    var timer: TimeController
+
+    var meshPipeLine: MTLRenderPipelineState!
+    var lastPanLocation: CGPoint = .zero
+
+    init(device: MTLDevice, view: MTKView) {
         self.device = device
-        plain = Plain(device: device)
-        plainPipeLine = makeDefaultRenderPipeline(device: device, vertexName: "vertex_shader", fragmentName: "fragment_shader")
-        plain.setPipeLineState(pipeLineState: plainPipeLine)
+        cameraSettings = CameraSettings(
+            eye: SIMD3<Float>(0,0,100),
+            center: SIMD3<Float>(0,0,0),
+            up: SIMD3<Float>(0,1,0),
+            fovDegrees: 60.0,
+            aspectRatio: 19.5/9,
+            nearZ: 1.0,
+            farZ: 1000.0)
+        
+        camera = Camera(settings: cameraSettings)
+        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
+        wordRenderer.setWord("Australopithecus")
+        timer = TimeController(startTime: 3.0, countDown: true)
+        timer.start()
+    }
+    
+    
+    
+    func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        if gesture.state == .began {
+            lastPanLocation = location
+        } else if gesture.state == .changed {
+            let delta = CGPoint(x: location.x - lastPanLocation.x, y: location.y - lastPanLocation.y)
+            lastPanLocation = location
+        }
+    }
+    
+    func handlePinchGesture(gesture: UIPinchGestureRecognizer) {
+        if gesture.state == .changed {
+            gesture.scale = 1.0
+        }
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
-        plain.encode(encoder: encoder)
+        wordRenderer.update(deltaTime: 1.0/60)
+        timer.update()
+        print("Ellapsed Time: \(timer.getEllapsedTime())")
+        wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
-    
     
 }

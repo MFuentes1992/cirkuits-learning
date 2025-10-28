@@ -11,16 +11,24 @@ class Renderer:NSObject, MTKViewDelegate {
     let commandQueue:MTLCommandQueue!
     let sceneManager:SceneManager!
     
-    init(device:MTLDevice!) {
+    init(device:MTLDevice!, view: MTKView!) {
         self.device = device
         self.commandQueue = device.makeCommandQueue()!
-        sceneManager = SceneManager(device: device)
+        sceneManager = SceneManager(device: device, view: view)
         sceneManager.setCurrentScene(sceneName: "Igniter")
         super.init()
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         
+    }
+    
+    func handlePanEvents(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        sceneManager.handlePanGesture(gesture: gesture, location: location)
+    }
+    
+    func handlePinchEvents(gesture: UIPinchGestureRecognizer) {
+        sceneManager.handlePinchGesture(gesture: gesture)
     }
     
     func draw(in view: MTKView) {

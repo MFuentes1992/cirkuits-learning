@@ -9,6 +9,7 @@ import MetalKit
 
 class SceneManager: SceneProtocol {
     var device: MTLDevice!
+    var view: MTKView!
     var currentScene: SceneProtocol!
     // TODO: Create scene manager state machine
     /* var scenes: [String: SceneProtocol] = [
@@ -16,13 +17,22 @@ class SceneManager: SceneProtocol {
         "Menu": MenuScene()
     ] */
     
-    init(device: MTLDevice) {
+    init(device: MTLDevice, view: MTKView) {
         self.device = device
+        self.view = view
     }
     
     func setCurrentScene(sceneName: String) {
-        self.currentScene = IgniterScene(device: self.device);
+        self.currentScene = IgniterScene(device: self.device, view: self.view);
         
+    }
+    
+    func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
+        self.currentScene.handlePanGesture(gesture: gesture, location: location)
+    }
+    
+    func handlePinchGesture(gesture: UIPinchGestureRecognizer) {
+        self.currentScene.handlePinchGesture(gesture: gesture)
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {

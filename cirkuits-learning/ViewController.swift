@@ -44,13 +44,25 @@ class ViewController: UIViewController {
 
         metalView = MTKView(frame: view.bounds, device: device)
         metalView.device = device
-        metalView.clearColor = MTLClearColorMake(1, 1, 1, 1.0)
+        metalView.clearColor = MTLClearColorMake(1, 1, 1, 0.5)
         // metalView.colorPixelFormat = .bgra8Unorm
         // metalView.depthStencilPixelFormat = .depth32Float
         view.addSubview(metalView)
 
-        renderer = Renderer(device: metalView.device)
+        renderer = Renderer(device: metalView.device, view: metalView)
         metalView.delegate = renderer
         print("App -> loaded!")
+        // Gestos
+        view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(handlePan)))
+        view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(handlePinch)))
+    }
+    
+    @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let location = gesture.location(in: view)
+        renderer.handlePanEvents(gesture: gesture, location: location)
+    }
+    
+    @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+        renderer.handlePinchEvents(gesture: gesture)
     }
 }

@@ -18,7 +18,6 @@ struct VertexOut {
     float4 color;
 };
 
-
 vertex VertexOut vertex_shader(const VertexIn vertexIn [[stage_in]]) {
     VertexOut vertexOut;
     vertexOut.position = float4(vertexIn.position, 1.0); // -- Last value is the "Normal"?
