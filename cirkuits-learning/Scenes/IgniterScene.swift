@@ -13,6 +13,7 @@ class IgniterScene: SceneProtocol {
     var cameraSettings: CameraSettings!
     var camera: Camera!
     var device: MTLDevice!
+    var timer: TimeController
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
@@ -31,6 +32,8 @@ class IgniterScene: SceneProtocol {
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
         wordRenderer.setWord("Australopithecus")
+        timer = TimeController(startTime: 3.0, countDown: true)
+        timer.start()
     }
     
     
@@ -52,6 +55,8 @@ class IgniterScene: SceneProtocol {
     
     func encode(encoder: any MTLRenderCommandEncoder) {
         wordRenderer.update(deltaTime: 1.0/60)
+        timer.update()
+        print("Ellapsed Time: \(timer.getEllapsedTime())")
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
     

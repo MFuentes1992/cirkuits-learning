@@ -23,6 +23,7 @@ class WordLayoutManager {
     private var shouldAnimateLayout: Bool = false
     private var acceleration: Float = 0.0
     private var animationAmout: Float = 0.0
+
     
     init (config: WordLayoutConfig, device: MTLDevice) {
         self.config = config
