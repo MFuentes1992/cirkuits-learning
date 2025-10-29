@@ -94,9 +94,6 @@ class ViewController: UIViewController {
     }
     
     func updateTimer() {
-        if(isPaused) {
-            return
-        }
         timeRemaining -= 0.1
         if timeRemaining <= 0 {
             timeRemaining = 0
