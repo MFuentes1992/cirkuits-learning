@@ -31,6 +31,7 @@ class WordLayoutManager {
     }
     
     func setWord(word: String) throws {
+        self.letters.removeAll()
         for letter in word {
             let letter = Letter(letter: String(letter), device: self.device)
             self.letters.append(letter)
@@ -65,6 +66,8 @@ class WordLayoutManager {
         if(totalWidth >= config.maxLinearWidth) {
             currentX = -totalWidth
             shouldAnimateLayout = true
+        } else {
+            shouldAnimateLayout = false
         }
         
         layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
