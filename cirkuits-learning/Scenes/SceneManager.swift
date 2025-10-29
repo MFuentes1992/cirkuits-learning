@@ -23,7 +23,7 @@ class SceneManager: SceneProtocol {
     }
     
     func setCurrentScene(sceneName: String) {
-        self.currentScene = IgniterScene(device: self.device, view: self.view, currentWodIndex: 0, isGameOver: true);
+        self.currentScene = IgniterScene(device: self.device, view: self.view, currentWodIndex: 0);
         
     }
     

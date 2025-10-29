@@ -6,15 +6,17 @@
 //
 import UIKit
 import MetalKit
+import SwiftUI
 
 class ViewController: UIViewController {
-    var metalView: MTKView!
-    var timerLabel: UILabel!
-    var scoreLabel: UILabel!
-    var pauseButton: UIButton!
-    var timeRemaining: TimeInterval = 60.0
-    var gameTimer: Timer?
-    var renderer: Renderer!
+    private var metalView: MTKView!
+    private var timerLabel: UILabel!
+    private var scoreLabel: UILabel!
+    private var pauseButton: UIButton!
+    private var timeRemaining: TimeInterval = 60.0
+    private var gameTimer: Timer?
+    private var renderer: Renderer!
+    private var comboGauge: ComboGauge!
     private var isPaused = false
 
     override func viewDidLoad() {
@@ -69,9 +71,13 @@ class ViewController: UIViewController {
         pauseButton.tintColor = .systemGray
         pauseButton.addTarget(self, action: #selector(pauseGame), for: .touchUpInside)
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
-                
         view.addSubview(pauseButton)
-        
+                
+        comboGauge = ComboGauge(combo: 0)
+        let comboChildView = UIHostingController(rootView: comboGauge).view!
+        comboChildView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(comboChildView)
+                
         // Constraints
         NSLayoutConstraint.activate([
             timerLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
@@ -81,7 +87,11 @@ class ViewController: UIViewController {
             scoreLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             
             pauseButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
-            pauseButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10)
+            pauseButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            
+            comboChildView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+            comboChildView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            
         ])
         updateTimerDisplay()
     }
