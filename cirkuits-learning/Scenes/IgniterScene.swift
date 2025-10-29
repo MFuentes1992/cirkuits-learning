@@ -70,16 +70,19 @@ class IgniterScene: SceneProtocol {
     }
     
     func encode(encoder: any MTLRenderCommandEncoder) {
+        if(isGameOver) {
+            return
+        }
         wordRenderer.update(deltaTime: 1.0/60)
         timer.update()
         
-        if(timer.isComplete() && !isGameOver) {
+        if(timer.isComplete()) {
             changeWord()
             timer.start()
             gameDuration += timer.getEllapsedTime()
         }
         
-        if(gameDuration >= igniterConfig.levelDuration && !isGameOver) {
+        if(gameDuration >= igniterConfig.levelDuration) {
             isGameOver =  true
             timer.stop()
             wordRenderer.setWord("Game Over")

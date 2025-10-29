@@ -11,9 +11,11 @@ class ViewController: UIViewController {
     var metalView: MTKView!
     var timerLabel: UILabel!
     var scoreLabel: UILabel!
+    var pauseButton: UIButton!
     var timeRemaining: TimeInterval = 60.0
     var gameTimer: Timer?
     var renderer: Renderer!
+    private var isPaused = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,7 +45,7 @@ class ViewController: UIViewController {
     
     func setupHUD() {
         timerLabel = UILabel()
-        timerLabel.font = .monospacedSystemFont(ofSize: 48, weight: .bold)
+        timerLabel.font = .monospacedSystemFont(ofSize: 32, weight: .bold)
         timerLabel.textColor = .gray
         timerLabel.shadowColor = .darkGray
         timerLabel.shadowOffset = CGSize(width: 2, height: 2)
@@ -53,11 +55,22 @@ class ViewController: UIViewController {
         // Score label
         scoreLabel = UILabel()
         scoreLabel.font = .monospacedSystemFont(ofSize: 32, weight: .bold)
-        scoreLabel.textColor = .yellow
-        scoreLabel.shadowColor = .black
+        scoreLabel.textColor = .gray
+        scoreLabel.shadowColor = .darkGray
         scoreLabel.shadowOffset = CGSize(width: 2, height: 2)
         scoreLabel.translatesAutoresizingMaskIntoConstraints = false
+        scoreLabel.text = "000"
         view.addSubview(scoreLabel)
+        
+        // Pause Button
+        pauseButton = UIButton(type: .system)
+        let pauseConfiguration = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        pauseButton.setImage(UIImage(systemName: "pause.circle.fill", withConfiguration: pauseConfiguration), for: .normal)
+        pauseButton.tintColor = .systemGray
+        pauseButton.addTarget(self, action: #selector(pauseGame), for: .touchUpInside)
+        pauseButton.translatesAutoresizingMaskIntoConstraints = false
+                
+        view.addSubview(pauseButton)
         
         // Constraints
         NSLayoutConstraint.activate([
@@ -65,7 +78,10 @@ class ViewController: UIViewController {
             timerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             
             scoreLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            scoreLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            scoreLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            
+            pauseButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
+            pauseButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10)
         ])
         updateTimerDisplay()
     }
@@ -78,6 +94,9 @@ class ViewController: UIViewController {
     }
     
     func updateTimer() {
+        if(isPaused) {
+            return
+        }
         timeRemaining -= 0.1
         if timeRemaining <= 0 {
             timeRemaining = 0
@@ -92,6 +111,22 @@ class ViewController: UIViewController {
         let seconds = Int(timeRemaining) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
+    }
+    
+    @objc func pauseGame() {
+        isPaused = !isPaused
+        let iconName = isPaused ? "play.circle.fill" : "pause.circle.fill"
+        let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        let image = UIImage(systemName: iconName, withConfiguration: config)
+        pauseButton.setImage(image, for: .normal)
+        
+        // Pause/resume game
+        if isPaused {
+            gameTimer?.invalidate()
+            // Pause Metal rendering if needed
+        } else {
+            startTimer()
+        }
     }
     
     @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
