@@ -39,4 +39,8 @@ class SceneManager: SceneProtocol {
         self.currentScene.encode(encoder: encoder)
     }
     
+    func togglePaused() {
+        self.currentScene.togglePaused()
+    }
+    
 }

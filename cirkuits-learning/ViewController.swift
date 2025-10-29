@@ -122,6 +122,7 @@ class ViewController: UIViewController {
     
     @objc func pauseGame() {
         isPaused = !isPaused
+        renderer.handlePauseEvent()
         let iconName = isPaused ? "play.circle.fill" : "pause.circle.fill"
         let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)

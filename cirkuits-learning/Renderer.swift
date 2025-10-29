@@ -31,6 +31,10 @@ class Renderer:NSObject, MTKViewDelegate {
         sceneManager.handlePinchGesture(gesture: gesture)
     }
     
+    func handlePauseEvent() {
+        sceneManager.togglePaused()
+    }
+    
     func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,
               let descriptor = view.currentRenderPassDescriptor else { return }

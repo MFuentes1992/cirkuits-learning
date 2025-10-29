@@ -18,17 +18,20 @@ class IgniterScene: SceneProtocol {
     private var igniterConfig: LevelConfig!
     private var gameDuration: Float
     private var isGameOver: Bool
+    private var isPaused: Bool
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
     
     let wordBank = ["Articulate", "Enthusiastic", "Absolutely", "Particularly", "Extraordinary", "Specifically", "Uniquely", "Passionately", "Radiantly", "Eagerly"]
 
-    init(device: MTLDevice, view: MTKView, currentWodIndex: Int = 0, isGameOver: Bool = false) {
+    init(device: MTLDevice, view: MTKView,
+         currentWodIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false) {
         self.device = device
         self.currenWordIndex = currentWodIndex
         self.gameDuration = 0
         self.isGameOver = isGameOver
+        self.isPaused = isPaused
         igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60)
         buildInitialScene(view: view)
     }
@@ -74,7 +77,10 @@ class IgniterScene: SceneProtocol {
             return
         }
         wordRenderer.update(deltaTime: 1.0/60)
-        timer.update()
+        
+        if(!isPaused) {
+            timer.update()
+        }
         
         if(timer.isComplete()) {
             changeWord()
@@ -89,6 +95,10 @@ class IgniterScene: SceneProtocol {
             
         }
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
+    }
+    
+    func togglePaused() {
+        self.isPaused = !self.isPaused
     }
     
 }
