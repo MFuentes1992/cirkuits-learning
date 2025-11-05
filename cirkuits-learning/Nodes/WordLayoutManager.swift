@@ -83,7 +83,6 @@ class WordLayoutManager {
             
             letter.transform = transform
             currentX += config.letterWidth + config.letterSpacing
-            print("Letter --> width: \(letter.width) bbR: \(letter.bbRightX) bbL: \(letter.bbLeftX)")
         }
     }
     

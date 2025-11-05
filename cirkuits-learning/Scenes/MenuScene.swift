@@ -21,4 +21,12 @@ class MenuScene: SceneProtocol {
     func togglePaused() {
         
     }
+    
+    func getScore() -> Double {
+        return 0.0
+    }
+    
+    func isCombo() -> Bool {
+        return false
+    }
 }

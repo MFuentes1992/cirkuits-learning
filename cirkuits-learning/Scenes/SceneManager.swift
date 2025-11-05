@@ -11,19 +11,22 @@ class SceneManager: SceneProtocol {
     var device: MTLDevice!
     var view: MTKView!
     var currentScene: SceneProtocol!
+    private var gameState: GameState!
     // TODO: Create scene manager state machine
     /* var scenes: [String: SceneProtocol] = [
         "Igniter": IgniterScene(),
         "Menu": MenuScene()
     ] */
     
-    init(device: MTLDevice, view: MTKView) {
+    init(device: MTLDevice, view: MTKView, gameState: GameState) {
         self.device = device
         self.view = view
+        self.gameState = gameState
     }
     
     func setCurrentScene(sceneName: String) {
-        self.currentScene = IgniterScene(device: self.device, view: self.view, currentWodIndex: 0);
+        self.currentScene = IgniterScene(device: self.device, view: self.view,
+                                         gameState: self.gameState, currentWodIndex: 0);
         
     }
     
@@ -39,8 +42,16 @@ class SceneManager: SceneProtocol {
         self.currentScene.encode(encoder: encoder)
     }
     
+    func getScore() -> Double {
+        return self.currentScene.getScore()
+    }
+    
     func togglePaused() {
         self.currentScene.togglePaused()
+    }
+    
+    func isCombo() -> Bool {
+        return self.currentScene.isCombo()
     }
     
 }

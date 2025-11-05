@@ -17,11 +17,11 @@ class ViewController: UIViewController {
     private var gameTimer: Timer?
     private var renderer: Renderer!
     private var comboGauge: ComboGauge!
+    private var gameState = GameState()
     private var isPaused = false
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         setupMetalView()
         setupHUD()
         startTimer()
@@ -34,10 +34,10 @@ class ViewController: UIViewController {
 
         metalView = MTKView(frame: view.bounds, device: device)
         metalView.device = device
-        metalView.clearColor = MTLClearColorMake(1, 1, 1, 0.5)
+        metalView.clearColor = MTLClearColorMake(0.423, 0.231, 0.66, 1)
         view.addSubview(metalView)
 
-        renderer = Renderer(device: metalView.device, view: metalView)
+        renderer = Renderer(device: metalView.device, view: metalView, gameState: self.gameState)
         metalView.delegate = renderer
         print("App -> loaded!")
         // Gestos
@@ -73,10 +73,10 @@ class ViewController: UIViewController {
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pauseButton)
                 
-        comboGauge = ComboGauge(combo: 0)
-        let comboChildView = UIHostingController(rootView: comboGauge).view!
-        comboChildView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(comboChildView)
+        comboGauge = ComboGauge()
+        comboGauge.translatesAutoresizingMaskIntoConstraints = false
+        gameState.setGaugeController(gauge: comboGauge)
+        view.addSubview(comboGauge)
                 
         // Constraints
         NSLayoutConstraint.activate([
@@ -86,11 +86,13 @@ class ViewController: UIViewController {
             scoreLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             scoreLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             
-            pauseButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
+            pauseButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
             pauseButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
             
-            comboChildView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
-            comboChildView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            comboGauge.widthAnchor.constraint(equalToConstant: 120),
+            comboGauge.heightAnchor.constraint(equalToConstant: 140),
+            comboGauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 5),
+            comboGauge.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
             
         ])
         updateTimerDisplay()
@@ -111,6 +113,7 @@ class ViewController: UIViewController {
             
         }
         updateTimerDisplay()
+        updateScoreDisplay()
     }
     
     func updateTimerDisplay() {
@@ -118,6 +121,11 @@ class ViewController: UIViewController {
         let seconds = Int(timeRemaining) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
+    }
+    
+    func updateScoreDisplay() {
+        let formattedScoreString = String(format: "0%.0f", renderer.sceneManager.getScore())
+        scoreLabel.text = formattedScoreString
     }
     
     @objc func pauseGame() {

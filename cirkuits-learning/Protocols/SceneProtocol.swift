@@ -11,4 +11,6 @@ protocol SceneProtocol {
     func handlePinchGesture(gesture: UIPinchGestureRecognizer)
     func encode(encoder: MTLRenderCommandEncoder)
     func togglePaused()
+    func getScore() -> Double
+    func isCombo() -> Bool
 }

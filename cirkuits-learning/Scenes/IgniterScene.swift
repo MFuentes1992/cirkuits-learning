@@ -19,19 +19,26 @@ class IgniterScene: SceneProtocol {
     private var gameDuration: Float
     private var isGameOver: Bool
     private var isPaused: Bool
+    private var strikeCount: Int
+    private var score: Double
+    private var gameState: GameState!
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
     
     let wordBank = ["Articulate", "Enthusiastic", "Absolutely", "Particularly", "Extraordinary", "Specifically", "Uniquely", "Passionately", "Radiantly", "Eagerly"]
 
-    init(device: MTLDevice, view: MTKView,
-         currentWodIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false) {
+    init(device: MTLDevice, view: MTKView, gameState: GameState,
+         currentWodIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false,
+         score: Double = 0, strikeCount: Int = 0) {
         self.device = device
+        self.gameState = gameState
         self.currenWordIndex = currentWodIndex
         self.gameDuration = 0
         self.isGameOver = isGameOver
         self.isPaused = isPaused
+        self.score = score
+        self.strikeCount = strikeCount
         igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60)
         buildInitialScene(view: view)
     }
@@ -72,6 +79,7 @@ class IgniterScene: SceneProtocol {
         wordRenderer.setWord(wordBank[currenWordIndex])
     }
     
+    // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder) {
         if(isGameOver) {
             return
@@ -83,6 +91,7 @@ class IgniterScene: SceneProtocol {
         }
         
         if(timer.isComplete()) {
+            self.strikeCount = 0
             changeWord()
             timer.start()
             gameDuration += timer.getEllapsedTime()
@@ -94,11 +103,34 @@ class IgniterScene: SceneProtocol {
             wordRenderer.setWord("Game Over")
             
         }
+        
+        if(Int.random(in: 1...60) % 60 == 0 && !isPaused) {
+            self.score += 1
+            self.strikeCount += 1
+        }
+        
+        if self.isCombo() {
+            self.strikeCount = 0
+            gameState.incrementCombo()
+        }
+        
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
+    }
+    
+    func getScore() -> Double {
+        return self.score
     }
     
     func togglePaused() {
         self.isPaused = !self.isPaused
+    }
+    
+    func isCombo() -> Bool {
+        if self.strikeCount >= 5 {
+            self.strikeCount = 0
+            return true
+        }
+        return false
     }
     
 }
