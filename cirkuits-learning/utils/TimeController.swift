@@ -64,4 +64,8 @@ class TimeController {
     func getEllapsedTime() -> Float {
         return ellapsedTime
     }
+    
+    func isComplete() -> Bool {
+        return isStopped
+    }
 }

@@ -10,11 +10,13 @@ class Renderer:NSObject, MTKViewDelegate {
     let device:MTLDevice
     let commandQueue:MTLCommandQueue!
     let sceneManager:SceneManager!
+    private var gameState:GameState!
     
-    init(device:MTLDevice!, view: MTKView!) {
+    init(device:MTLDevice!, view: MTKView!, gameState:GameState!) {
         self.device = device
         self.commandQueue = device.makeCommandQueue()!
-        sceneManager = SceneManager(device: device, view: view)
+        self.gameState = gameState
+        sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
         sceneManager.setCurrentScene(sceneName: "Igniter")
         super.init()
     }
@@ -29,6 +31,14 @@ class Renderer:NSObject, MTKViewDelegate {
     
     func handlePinchEvents(gesture: UIPinchGestureRecognizer) {
         sceneManager.handlePinchGesture(gesture: gesture)
+    }
+    
+    func handlePauseEvent() {
+        sceneManager.togglePaused()
+    }
+    
+    func isCombo() -> Bool {
+        return sceneManager.isCombo()
     }
     
     func draw(in view: MTKView) {

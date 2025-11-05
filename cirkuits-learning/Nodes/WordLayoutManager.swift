@@ -31,11 +31,12 @@ class WordLayoutManager {
     }
     
     func setWord(word: String) throws {
+        self.letters.removeAll()
         for letter in word {
             let letter = Letter(letter: String(letter), device: self.device)
             self.letters.append(letter)
         }
-        createLinearTransform(initialPositionX: 0.0)
+        createLinearTransform(initialPositionX: 0.0, initialPositionY: 20)
     }
     
     func getLetters() -> [Letter] {
@@ -58,13 +59,15 @@ class WordLayoutManager {
         return totalLetterWidth + totalSpacing
     }
         
-    private func createLinearTransform(initialPositionX: Float) {
+    private func createLinearTransform(initialPositionX: Float, initialPositionY: Float = 0.0) {
         let totalWidth = calculateLinearWidth()
         var currentX: Float = initialPositionX - totalWidth/2
         
         if(totalWidth >= config.maxLinearWidth) {
             currentX = -totalWidth
             shouldAnimateLayout = true
+        } else {
+            shouldAnimateLayout = false
         }
         
         layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
@@ -76,10 +79,10 @@ class WordLayoutManager {
             // Create transform matrix
             var transform = matrix_identity_float4x4
             transform.columns.3.x = currentX
+            transform.columns.3.y = initialPositionY
             
             letter.transform = transform
             currentX += config.letterWidth + config.letterSpacing
-            print("Letter --> width: \(letter.width) bbR: \(letter.bbRightX) bbL: \(letter.bbLeftX)")
         }
     }
     
