@@ -40,18 +40,5 @@ class SceneManager: SceneProtocol {
     
     func encode(encoder: any MTLRenderCommandEncoder) {
         self.currentScene.encode(encoder: encoder)
-    }
-    
-    func getScore() -> Double {
-        return self.currentScene.getScore()
-    }
-    
-    func togglePaused() {
-        self.currentScene.togglePaused()
-    }
-    
-    func isCombo() -> Bool {
-        return self.currentScene.isCombo()
-    }
-    
+    }    
 }

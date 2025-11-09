@@ -17,16 +17,4 @@ class MenuScene: SceneProtocol {
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
         
     }
-    
-    func togglePaused() {
-        
-    }
-    
-    func getScore() -> Double {
-        return 0.0
-    }
-    
-    func isCombo() -> Bool {
-        return false
-    }
 }
