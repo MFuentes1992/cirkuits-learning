@@ -58,7 +58,7 @@ fragment float4 obj_fragment_shader(VertexOut in [[stage_in]]) {
     float3 lightDir = normalize(in.worldPosition - float3(0, 0, 100));
     float diff = max(dot(-lightDir, in.normal), 0.0);
 
-    float3 baseColor = float3(0, 0.647, 1.0); // Dorado
+    float3 baseColor = float3(1, 0.647, 1.0); // Dorado
     float3 ambient = 0.3 * baseColor;
     float3 diffuse = diff * baseColor;    
     return float4(ambient + diffuse, 1.0);

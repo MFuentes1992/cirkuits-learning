@@ -16,11 +16,8 @@ class IgniterScene: SceneProtocol {
     private var timer: TimeController!
     private var currenWordIndex: Int
     private var igniterConfig: LevelConfig!
-    private var gameDuration: Float
-    private var isGameOver: Bool
-    private var isPaused: Bool
-    private var strikeCount: Int
-    private var score: Double
+    private var gameElapsedTime: Double
+    private var currentAnswerWindow: Double
     private var gameState: GameState!
 
     var meshPipeLine: MTLRenderPipelineState!
@@ -34,12 +31,9 @@ class IgniterScene: SceneProtocol {
         self.device = device
         self.gameState = gameState
         self.currenWordIndex = currentWodIndex
-        self.gameDuration = 0
-        self.isGameOver = isGameOver
-        self.isPaused = isPaused
-        self.score = score
-        self.strikeCount = strikeCount
-        igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60)
+        self.gameElapsedTime = 0
+        self.currentAnswerWindow = 0
+        igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60, defaultPoints: 10)
         buildInitialScene(view: view)
     }
     
@@ -55,7 +49,7 @@ class IgniterScene: SceneProtocol {
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
         wordRenderer.setWord(wordBank[currenWordIndex])
-        timer = TimeController(startTime: igniterConfig.timeWindow, countDown: true)
+        timer = TimeController()
         timer.start()
     }
     
@@ -81,56 +75,49 @@ class IgniterScene: SceneProtocol {
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder) {
-        if(isGameOver) {
+        if(gameState.getCurrentState() == .stop) {
             return
         }
-        wordRenderer.update(deltaTime: 1.0/60)
         
-        if(!isPaused) {
-            timer.update()
-        }
+        timer.update()
+        if gameState.getCurrentState() != .pause &&  gameState.getCurrentState() != .initializing {
+            
+            wordRenderer.update(deltaTime: 1.0/60)
+            gameState.decrementTime(time: Double(timer.getTickSeconds()))
+            gameElapsedTime += Double(timer.getTickSeconds())
+            currentAnswerWindow += Double(timer.getTickSeconds())
+        }                
         
-        if(timer.isComplete()) {
-            self.strikeCount = 0
+        if(currentAnswerWindow > igniterConfig.timeWindow) {
             changeWord()
-            timer.start()
-            gameDuration += timer.getEllapsedTime()
+            currentAnswerWindow = 0
         }
         
-        if(gameDuration >= igniterConfig.levelDuration) {
-            isGameOver =  true
+        if(gameElapsedTime > igniterConfig.levelDuration) {
+            gameState.setState(state: .stop)
             timer.stop()
             wordRenderer.setWord("Game Over")
             
         }
         
-        if(Int.random(in: 1...60) % 60 == 0 && !isPaused) {
-            self.score += 1
-            self.strikeCount += 1
+        if gameState.getCurrentState() == .initializing {
+            gameState.decrementCountDown(time: Double(timer.getTickSeconds()))
+            if gameState.getCountDown() <= 0 {
+                gameState.setState(state: .running)
+            }
         }
         
-        if self.isCombo() {
-            self.strikeCount = 0
-            gameState.incrementCombo()
+        if(Int.random(in: 1...100) == 1 && (gameState.getCurrentState() != .pause
+                                                && gameState.getCurrentState() != .initializing)) {
+            gameState.incrementScore(increment: Int(igniterConfig.defaultPoints))
+            if(Int.random(in: 0...10) == 1) {
+                gameState.setStrike(value: true )
+            }
+            
         }
         
-        wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
-    }
-    
-    func getScore() -> Double {
-        return self.score
-    }
-    
-    func togglePaused() {
-        self.isPaused = !self.isPaused
-    }
-    
-    func isCombo() -> Bool {
-        if self.strikeCount >= 5 {
-            self.strikeCount = 0
-            return true
+        if gameState.getCurrentState() != .initializing {
+            wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
         }
-        return false
     }
-    
 }
