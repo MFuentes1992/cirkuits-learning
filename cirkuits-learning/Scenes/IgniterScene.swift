@@ -107,8 +107,13 @@ class IgniterScene: SceneProtocol {
             }
         }
         
-        if(Int.random(in: 1...60) % 60 == 0 && gameState.getCurrentState() != .pause) {
+        if(Int.random(in: 1...100) == 1 && (gameState.getCurrentState() != .pause
+                                                && gameState.getCurrentState() != .initializing)) {
             gameState.incrementScore(increment: Int(igniterConfig.defaultPoints))
+            if(Int.random(in: 0...10) == 1) {
+                gameState.setStrike(value: true )
+            }
+            
         }
         
         if gameState.getCurrentState() != .initializing {

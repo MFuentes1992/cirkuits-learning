@@ -8,6 +8,7 @@ import SwiftUI
 class GameState {
     private var combo: Int
     private var score: Int
+    private var strike: Bool
     // -- TODO: move to configuration file - persistance
     private var scoreLimit = 999
     private var highScore = 0
@@ -21,6 +22,7 @@ class GameState {
         self.gameState = gameState
         self.combo = 0
         self.score = 0
+        self.strike = false
     }
     
     
@@ -50,8 +52,18 @@ class GameState {
         self.reminingTime = time
     }
     
+    func setStrike(value: Bool) {
+        strike = value
+    }
+    
+    func getStrike() -> Bool {
+        return strike
+    }
+    
     func decrementTime(time: TimeInterval) {
-        self.reminingTime -= time
+        if reminingTime > 0 {
+            self.reminingTime -= time
+        }        
     }
     
     func decrementCountDown(time: TimeInterval) {

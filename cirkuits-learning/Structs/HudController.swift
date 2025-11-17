@@ -114,8 +114,13 @@ class HudController {
     }
     
     func updateScoreDisplay() {
-        let formattedScoreString = String(format: "0%.0f", gameState.getCurrentScore())
+        let formattedScoreString = String(format: "%d", gameState.getCurrentScore())
         scoreLabel.text = formattedScoreString
+        if(gameState.getStrike()) {
+            comboGauge.incrementCombo()
+            gameState.setStrike(value: false)
+        }
+        
     }
     
     func updateCountDown() {
