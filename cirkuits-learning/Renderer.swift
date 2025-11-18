@@ -1,4 +1,5 @@
 import MetalKit
+import Foundation
 //
 //  Renderer.swift
 //  cirkuits-learning
@@ -10,8 +11,10 @@ class Renderer:NSObject, MTKViewDelegate {
     let device:MTLDevice
     let commandQueue:MTLCommandQueue!
     let sceneManager:SceneManager!
-    private var gameState:GameState = GameState(gameState: .initializing)
+    private var transcription = ""
+    private var gameState:GameState = GameState(gameState: .stop)
     private var hudController:HudController!
+    private var speechRecognition: SpeechRecognizer
     
     init(device:MTLDevice!, view: MTKView!) {
         self.device = device
@@ -19,7 +22,11 @@ class Renderer:NSObject, MTKViewDelegate {
         self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
         sceneManager.setCurrentScene(sceneName: "Igniter")
+        speechRecognition = SpeechRecognizer()
         super.init()
+        Task { @MainActor in
+            startRecording()
+        }        
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -34,6 +41,22 @@ class Renderer:NSObject, MTKViewDelegate {
         sceneManager.handlePinchGesture(gesture: gesture)
     }
     
+    @MainActor
+    func startRecording() {
+        print("Should start recording")
+        let _ = _Concurrency.Task {
+            do {
+                
+                let stream = speechRecognition.transcribe()
+                for try await partialResult in stream {                    
+                    print("voice input:\(partialResult)")
+                }
+            } catch {
+                print("voice input error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,
               let descriptor = view.currentRenderPassDescriptor else { return }
@@ -44,7 +67,7 @@ class Renderer:NSObject, MTKViewDelegate {
         commandEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
-        
+                
         hudController.updateHud()
         
     }
