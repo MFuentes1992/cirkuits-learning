@@ -80,13 +80,13 @@ class IgniterScene: SceneProtocol {
         }
         
         timer.update()
-        if gameState.getCurrentState() != .pause &&  gameState.getCurrentState() != .initializing {
-            
+        if gameState.getCurrentState() == .running {
             wordRenderer.update(deltaTime: 1.0/60)
             gameState.decrementTime(time: Double(timer.getTickSeconds()))
             gameElapsedTime += Double(timer.getTickSeconds())
             currentAnswerWindow += Double(timer.getTickSeconds())
-        }                
+            wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
+        }
         
         if(currentAnswerWindow > igniterConfig.timeWindow) {
             changeWord()
@@ -100,24 +100,20 @@ class IgniterScene: SceneProtocol {
             
         }
         
-        if gameState.getCurrentState() == .initializing {
+        // TODO: Game should not control countDown/ start time
+        /* if gameState.getCurrentState() == .initializing {
+            print("Ticks:\(timer.getTickSeconds())")
             gameState.decrementCountDown(time: Double(timer.getTickSeconds()))
             if gameState.getCountDown() <= 0 {
                 gameState.setState(state: .running)
             }
         }
         
-        if(Int.random(in: 1...100) == 1 && (gameState.getCurrentState() != .pause
-                                                && gameState.getCurrentState() != .initializing)) {
+        if(Int.random(in: 1...100) == 1 && gameState.getCurrentState() == .running) {
             gameState.incrementScore(increment: Int(igniterConfig.defaultPoints))
             if(Int.random(in: 0...10) == 1) {
                 gameState.setStrike(value: true )
             }
-            
-        }
-        
-        if gameState.getCurrentState() != .initializing {
-            wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
-        }
+        } */
     }
 }

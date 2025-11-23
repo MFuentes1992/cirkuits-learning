@@ -14,7 +14,7 @@ class Renderer:NSObject, MTKViewDelegate {
     private var transcription = ""
     private var gameState:GameState = GameState(gameState: .stop)
     private var hudController:HudController!
-    private var speechRecognition: SpeechRecognizer
+    
     
     init(device:MTLDevice!, view: MTKView!) {
         self.device = device
@@ -22,11 +22,11 @@ class Renderer:NSObject, MTKViewDelegate {
         self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
         sceneManager.setCurrentScene(sceneName: "Igniter")
-        speechRecognition = SpeechRecognizer()
         super.init()
+        /* speechRecognition = SpeechRecognizer()        
         Task { @MainActor in
             startRecording()
-        }        
+        } */
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -41,7 +41,7 @@ class Renderer:NSObject, MTKViewDelegate {
         sceneManager.handlePinchGesture(gesture: gesture)
     }
     
-    @MainActor
+   /* @MainActor
     func startRecording() {
         print("Should start recording")
         let _ = _Concurrency.Task {
@@ -55,7 +55,7 @@ class Renderer:NSObject, MTKViewDelegate {
                 print("voice input error: \(error.localizedDescription)")
             }
         }
-    }
+    } */
     
     func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,

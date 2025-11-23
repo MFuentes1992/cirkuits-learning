@@ -16,7 +16,7 @@ class GameState {
     private var reminingTime: TimeInterval = 60
     
     private var gameState: PlayState
-    private var countDownTime: TimeInterval = 3
+    private var countDownTime: TimeInterval = TimeInterval(Initializers.initCountDown)
     
     init(gameState: PlayState) {
         self.gameState = gameState

@@ -78,13 +78,14 @@ class SpeechRecognizer {
                         if let result = result {
                             let newText = result.bestTranscription.formattedString
                             
-                            continuation.yield(transcript + newText)
                             
+                            continuation.yield(newText)
                             if result.speechRecognitionMetadata != nil {
-                                transcript += newText + " "
+                                transcript = newText
                             }
                             
                             if result.isFinal {
+                                print("result is final")
                                 continuation.finish()
                                 self.reset()
                             }

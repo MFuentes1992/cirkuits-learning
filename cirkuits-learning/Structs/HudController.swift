@@ -12,13 +12,18 @@ class HudController {
     private var scoreLabel: UILabel!
     private var countDownLabel: UILabel!
     private var pauseButton: UIButton!
+    private var playButton: UIButton!
+    private var parentView: UIView
     private var comboGauge: ComboGauge!
     private var gameState: GameState!
-    private var parentView: UIView
+    private var speechRecognition: SpeechRecognizer
+    private var time: TimeController!
     
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
+        speechRecognition = SpeechRecognizer()
+        time = TimeController()
         setupHUD()
         updateTimerDisplay()
     }
@@ -50,7 +55,8 @@ class HudController {
         countDownLabel.shadowColor = .darkGray
         countDownLabel.shadowOffset = CGSize(width: 2, height: 2)
         countDownLabel.translatesAutoresizingMaskIntoConstraints = false
-        countDownLabel.text = "3"
+        countDownLabel.text = "\(gameState.getCountDown())"
+        countDownLabel.isHidden = true
         parentView.addSubview(countDownLabel)
         
         // Pause Button
@@ -61,6 +67,15 @@ class HudController {
         pauseButton.addTarget(self, action: #selector(togglePause), for: .touchUpInside)
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(pauseButton)
+        
+        //Play Button
+        playButton = UIButton(type:.system)
+        let playConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        playButton.setImage(UIImage(systemName: "play.circle.fill", withConfiguration: playConfig), for: .normal)
+        playButton.tintColor = .systemGray
+        playButton.addTarget(self, action: #selector(startGame), for: .touchUpInside)
+        playButton.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(playButton)
         
         //combo Gauge
         comboGauge = ComboGauge()
@@ -79,6 +94,10 @@ class HudController {
             
             countDownLabel.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
             countDownLabel.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+            
+            playButton.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
+            playButton.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+            
             
             pauseButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
             pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -10),
@@ -106,6 +125,16 @@ class HudController {
         pauseButton.setImage(image, for: .normal)
     }
     
+    @objc func startGame() {
+        playButton.isHidden = true
+        countDownLabel.isHidden = false
+        gameState.setState(state: .initializing)
+        time.start()
+        Task { @MainActor in
+            startRecording()
+        }
+    }
+    
     func updateTimerDisplay() {
         let minutes = Int(gameState.getReminingTime() / 60)
         let seconds = Int(gameState.getReminingTime()) % 60
@@ -124,12 +153,19 @@ class HudController {
     }
     
     func updateCountDown() {
+        if gameState.getCurrentState() == .initializing {
+            time.update()
+        }
         if gameState.getCountDown() != 0 {
+            gameState.decrementCountDown(time: Double(time.getTickSeconds()))
             let formattedScoreString = String(format: "%.0f", gameState.getCountDown())
             countDownLabel.text = formattedScoreString
         } else {
+            time.stop()
+            countDownLabel.isHidden = true
             countDownLabel.text = ""
             countDownLabel.removeFromSuperview()
+            gameState.setState(state: .running)
         }
     }
     
@@ -141,6 +177,22 @@ class HudController {
             updateCountDown()
         }
     }
+    
+    @MainActor
+     func startRecording() {
+         print("Start recording...")
+         let _ = _Concurrency.Task {
+             do {
+                 
+                 let stream = speechRecognition.transcribe()
+                 for try await partialResult in stream {
+                     print("voice captured:\(partialResult)")
+                 }
+             } catch {
+                 print("voice input error: \(error.localizedDescription)")
+             }
+         }
+     }
 }
 
 
