@@ -75,16 +75,18 @@ class IgniterScene: SceneProtocol {
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder) {
+        timer.update()
         if(gameState.getCurrentState() == .stop) {
             return
         }
-        
-        timer.update()
-        if gameState.getCurrentState() == .running {
-            wordRenderer.update(deltaTime: 1.0/60)
-            gameState.decrementTime(time: Double(timer.getTickSeconds()))
-            gameElapsedTime += Double(timer.getTickSeconds())
-            currentAnswerWindow += Double(timer.getTickSeconds())
+                
+        if gameState.getCurrentState() == .running || gameState.getCurrentState() == .pause {
+            if gameState.getCurrentState() != .pause {
+                wordRenderer.update(deltaTime: 1.0/60)
+                gameState.decrementTime(time: Double(timer.getTickSeconds()))
+                gameElapsedTime += Double(timer.getTickSeconds())
+                currentAnswerWindow += Double(timer.getTickSeconds())
+            }
             wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
         }
         
@@ -101,15 +103,8 @@ class IgniterScene: SceneProtocol {
         }
         
         // TODO: Game should not control countDown/ start time
-        /* if gameState.getCurrentState() == .initializing {
-            print("Ticks:\(timer.getTickSeconds())")
-            gameState.decrementCountDown(time: Double(timer.getTickSeconds()))
-            if gameState.getCountDown() <= 0 {
-                gameState.setState(state: .running)
-            }
-        }
         
-        if(Int.random(in: 1...100) == 1 && gameState.getCurrentState() == .running) {
+       /* if(Int.random(in: 1...100) == 1 && gameState.getCurrentState() == .running) {
             gameState.incrementScore(increment: Int(igniterConfig.defaultPoints))
             if(Int.random(in: 0...10) == 1) {
                 gameState.setStrike(value: true )

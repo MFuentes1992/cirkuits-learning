@@ -123,6 +123,7 @@ class HudController {
         let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
         pauseButton.setImage(image, for: .normal)
+        // speechRecognition.stopTranscribing()
     }
     
     @objc func startGame() {
@@ -160,7 +161,7 @@ class HudController {
             gameState.decrementCountDown(time: Double(time.getTickSeconds()))
             let formattedScoreString = String(format: "%.0f", gameState.getCountDown())
             countDownLabel.text = formattedScoreString
-        } else {
+        } else if gameState.getCurrentState() == .initializing {
             time.stop()
             countDownLabel.isHidden = true
             countDownLabel.text = ""
