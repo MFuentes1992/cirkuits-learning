@@ -86,6 +86,7 @@ class IgniterScene: SceneProtocol {
                 gameState.decrementTime(time: Double(timer.getTickSeconds()))
                 gameElapsedTime += Double(timer.getTickSeconds())
                 currentAnswerWindow += Double(timer.getTickSeconds())
+                print("captured answer:\(gameState.capturedAnser)")
             }
             wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
         }

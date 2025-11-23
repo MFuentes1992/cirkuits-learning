@@ -29,9 +29,11 @@ class SpeechRecognizer {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let recognizer: SFSpeechRecognizer?
+    private var gameState: GameState?
     
-    init() {
+    init(gameState: GameState) {
         recognizer = SFSpeechRecognizer()
+        self.gameState = gameState
         guard recognizer != nil else {
             print(RecognizerError.nilRecognizer)
             return
@@ -51,51 +53,39 @@ class SpeechRecognizer {
         }
     }
     
-    @MainActor
-    func transcribe() -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    let (audioEngine, request) = try Self.prepareEngine()
-                    self.audioEngine = audioEngine
-                    self.request = request
-                    
-                    guard let recognizer = self.recognizer else {
-                        throw RecognizerError.recognizerIsUnavailable
-                    }
-                    
-                    self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                        guard let self = self else {
-                            return
-                        }
-                        
-                        if let error = error {
-                            continuation.finish(throwing: error)
-                            self.reset()
-                            return
-                        }
-                        
-                        if let result = result {
-                            let newText = result.bestTranscription.formattedString
-                            
-                            
-                            continuation.yield(newText)
-                            if result.speechRecognitionMetadata != nil {
-                                transcript = newText
-                            }
-                            
-                            if result.isFinal {
-                                print("result is final")
-                                continuation.finish()
-                                self.reset()
-                            }
-                        }
-                    }
-                } catch {
-                    continuation.finish(throwing: error)
-                    self.reset()
-                }
+    func startRecording() throws {
+        do {
+            let (audioEngine, request) = try Self.prepareEngine()
+            self.audioEngine = audioEngine
+            self.request = request
+            
+            guard let recognizer = self.recognizer else {
+                throw RecognizerError.recognizerIsUnavailable
             }
+            self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                guard let self = self else {
+                    return
+                }
+                
+                if let error = error {
+                    print("AVAudio engine error:\(error)")
+                    self.reset()
+                    return
+                }
+                
+                if let result = result {
+                    let newText = result.bestTranscription.formattedString
+                    gameState?.capturedAnser = newText
+                   print("Voice captured:\(newText)")
+                    // True when engine is stopped
+                    if result.isFinal {
+                        self.reset()
+                    }
+                }
+
+            }
+        } catch {
+            self.reset()
         }
     }
     

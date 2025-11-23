@@ -18,11 +18,13 @@ class HudController {
     private var gameState: GameState!
     private var speechRecognition: SpeechRecognizer
     private var time: TimeController!
+    private var answerOffset: Int
     
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
-        speechRecognition = SpeechRecognizer()
+        answerOffset = 0
+        speechRecognition = SpeechRecognizer(gameState: gameState)
         time = TimeController()
         setupHUD()
         updateTimerDisplay()
@@ -123,16 +125,20 @@ class HudController {
         let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
         pauseButton.setImage(image, for: .normal)
-        // speechRecognition.stopTranscribing()
     }
     
     @objc func startGame() {
         playButton.isHidden = true
         countDownLabel.isHidden = false
+        parentView.setNeedsDisplay()
         gameState.setState(state: .initializing)
         time.start()
-        Task { @MainActor in
-            startRecording()
+        Task {
+            do {
+                try speechRecognition.startRecording()
+            } catch {
+                print("Cannot start recording...")
+            }
         }
     }
     
@@ -178,22 +184,6 @@ class HudController {
             updateCountDown()
         }
     }
-    
-    @MainActor
-     func startRecording() {
-         print("Start recording...")
-         let _ = _Concurrency.Task {
-             do {
-                 
-                 let stream = speechRecognition.transcribe()
-                 for try await partialResult in stream {
-                     print("voice captured:\(partialResult)")
-                 }
-             } catch {
-                 print("voice input error: \(error.localizedDescription)")
-             }
-         }
-     }
 }
 
 

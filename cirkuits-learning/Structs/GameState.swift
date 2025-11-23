@@ -17,6 +17,12 @@ class GameState {
     
     private var gameState: PlayState
     private var countDownTime: TimeInterval = TimeInterval(Initializers.initCountDown)
+    private var _capturedAnswer: String = ""
+    private var answerOffset = 0
+    var capturedAnser: String {
+        get { _capturedAnswer }
+        set {_capturedAnswer = newValue.components(separatedBy: .whitespaces).last ?? "" }
+    }
     
     init(gameState: PlayState) {
         self.gameState = gameState
