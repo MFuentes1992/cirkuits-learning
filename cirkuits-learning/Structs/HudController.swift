@@ -135,9 +135,15 @@ class HudController {
         var iconName = "microphone.slash.circle.fill"
         if microphoneStatus == .unmuted {
             microphoneStatus = .muted
+            speechRecognition.stopTranscribing()
         } else {
             microphoneStatus = .unmuted
             iconName = "microphone.circle.fill"
+            do {
+                try speechRecognition.startRecording()
+            } catch {
+                print("Cannot start recording...")
+            }
         }
         let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
