@@ -19,12 +19,19 @@ class HudController {
     private var speechRecognition: SpeechRecognizer
     private var time: TimeController!
     private var answerOffset: Int
+    private var microphoneStatus: MicrophoneState
+    private var microphoneButton: UIButton!
+    
+    private var lookAndFeel: UILayoutLookAndFeel!
     
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
         answerOffset = 0
+        microphoneStatus = .unmuted
+        lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         speechRecognition = SpeechRecognizer(gameState: gameState)
+        
         time = TimeController()
         setupHUD()
         updateTimerDisplay()
@@ -33,18 +40,18 @@ class HudController {
     
     func setupHUD() {
         timerLabel = UILabel()
-        timerLabel.font = .monospacedSystemFont(ofSize: 32, weight: .bold)
-        timerLabel.textColor = .gray
-        timerLabel.shadowColor = .darkGray
+        timerLabel.font = .monospacedSystemFont(ofSize: lookAndFeel.fontSize, weight: .bold)
+        timerLabel.textColor = lookAndFeel.color
+        timerLabel.shadowColor = lookAndFeel.foreColor
         timerLabel.shadowOffset = CGSize(width: 2, height: 2)
         timerLabel.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(self.timerLabel)
         
         // Score label
         scoreLabel = UILabel()
-        scoreLabel.font = .monospacedSystemFont(ofSize: 32, weight: .bold)
-        scoreLabel.textColor = .gray
-        scoreLabel.shadowColor = .darkGray
+        scoreLabel.font = .monospacedSystemFont(ofSize: lookAndFeel.fontSize, weight: .bold)
+        scoreLabel.textColor = lookAndFeel.color
+        scoreLabel.shadowColor = lookAndFeel.foreColor
         scoreLabel.shadowOffset = CGSize(width: 2, height: 2)
         scoreLabel.translatesAutoresizingMaskIntoConstraints = false
         scoreLabel.text = "000"
@@ -53,8 +60,8 @@ class HudController {
         // Countdown label
         countDownLabel = UILabel()
         countDownLabel.font = .monospacedSystemFont(ofSize: 42, weight: .bold)
-        countDownLabel.textColor = .gray
-        countDownLabel.shadowColor = .darkGray
+        countDownLabel.textColor = lookAndFeel.color
+        countDownLabel.shadowColor = lookAndFeel.foreColor
         countDownLabel.shadowOffset = CGSize(width: 2, height: 2)
         countDownLabel.translatesAutoresizingMaskIntoConstraints = false
         countDownLabel.text = "\(gameState.getCountDown())"
@@ -63,18 +70,27 @@ class HudController {
         
         // Pause Button
         pauseButton = UIButton(type: .system)
-        let pauseConfiguration = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        let pauseConfiguration = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         pauseButton.setImage(UIImage(systemName: "pause.circle.fill", withConfiguration: pauseConfiguration), for: .normal)
-        pauseButton.tintColor = .systemGray
+        pauseButton.tintColor = lookAndFeel.color
         pauseButton.addTarget(self, action: #selector(togglePause), for: .touchUpInside)
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(pauseButton)
         
+        // Mute Button
+        microphoneButton = UIButton(type: .system)
+        let microphoneConfiguration = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
+        microphoneButton.setImage(UIImage(systemName: "microphone.circle.fill", withConfiguration: microphoneConfiguration), for: .normal)
+        microphoneButton.tintColor = lookAndFeel.color
+        microphoneButton.addTarget(self, action: #selector(toggleMute), for: .touchUpInside)
+        microphoneButton.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(microphoneButton)
+        
         //Play Button
         playButton = UIButton(type:.system)
-        let playConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        let playConfig = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         playButton.setImage(UIImage(systemName: "play.circle.fill", withConfiguration: playConfig), for: .normal)
-        playButton.tintColor = .systemGray
+        playButton.tintColor = lookAndFeel.color
         playButton.addTarget(self, action: #selector(startGame), for: .touchUpInside)
         playButton.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(playButton)
@@ -85,7 +101,7 @@ class HudController {
         parentView.addSubview(comboGauge)
         
         
-                
+        
         // Constraints
         NSLayoutConstraint.activate([
             timerLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 20),
@@ -104,12 +120,28 @@ class HudController {
             pauseButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
             pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -10),
             
+            microphoneButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+            microphoneButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -60),
+            
             comboGauge.widthAnchor.constraint(equalToConstant: 120),
             comboGauge.heightAnchor.constraint(equalToConstant: 140),
             comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 5),
             comboGauge.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10)
             
         ])
+    }
+    
+    @objc func toggleMute() {
+        var iconName = "microphone.slash.circle.fill"
+        if microphoneStatus == .unmuted {
+            microphoneStatus = .muted
+        } else {
+            microphoneStatus = .unmuted
+            iconName = "microphone.circle.fill"
+        }
+        let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
+        let image = UIImage(systemName: iconName, withConfiguration: config)
+        microphoneButton.setImage(image, for: .normal)
     }
     
     @objc func togglePause() {
@@ -122,7 +154,7 @@ class HudController {
             state = .running
         }
         gameState.setState(state: state)
-        let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
         pauseButton.setImage(image, for: .normal)
     }

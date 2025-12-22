@@ -4,6 +4,7 @@
 //
 //  Created by Marco Fuentes Jiménez on 07/09/25.
 //
+import SwiftUI
 
 struct WordLayoutConfig {
     let screenWidth: Float
@@ -26,5 +27,22 @@ struct WordLayoutConfig {
         self.speed = speed
         self.blankSpaceWidth = blankSpaceWidth
         self.letterWidth = letterWidth
+    }
+}
+
+struct UILayoutLookAndFeel {
+    let color: UIColor
+    let foreColor: UIColor
+    let buttonSize: CGFloat
+    let fontSize: CGFloat
+    
+    init(color: UIColor,
+         foreColor: UIColor,
+         buttonSize: CGFloat,
+         fontSize: CGFloat) {
+        self.color = color
+        self.foreColor = foreColor
+        self.buttonSize = buttonSize
+        self.fontSize = fontSize
     }
 }

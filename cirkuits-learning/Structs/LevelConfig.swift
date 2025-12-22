@@ -12,5 +12,5 @@ struct Initializers {
 struct LevelConfig {
     var timeWindow: Double
     var levelDuration: Double
-    var defaultPoints: Int8
+    var StrikeLimit: Int
 }

@@ -14,11 +14,13 @@ class IgniterScene: SceneProtocol {
     private var camera: Camera!
     private var device: MTLDevice!
     private var timer: TimeController!
-    private var currenWordIndex: Int
+    private var currentFooIndex: Int
+    private var strikeChain: Int
     private var igniterConfig: LevelConfig!
     private var gameElapsedTime: Double
     private var currentAnswerWindow: Double
     private var gameState: GameState!
+    private var WordFoos = [WordFoo]()
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
@@ -26,14 +28,15 @@ class IgniterScene: SceneProtocol {
     let wordBank = ["Articulate", "Enthusiastic", "Absolutely", "Particularly", "Extraordinary", "Specifically", "Uniquely", "Passionately", "Radiantly", "Eagerly"]
 
     init(device: MTLDevice, view: MTKView, gameState: GameState,
-         currentWodIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false,
+         currentFooIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false,
          score: Double = 0, strikeCount: Int = 0) {
         self.device = device
         self.gameState = gameState
-        self.currenWordIndex = currentWodIndex
+        self.currentFooIndex = currentFooIndex
         self.gameElapsedTime = 0
         self.currentAnswerWindow = 0
-        igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60, defaultPoints: 10)
+        self.strikeChain = 0
+        igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60, StrikeLimit: 3)
         buildInitialScene(view: view)
     }
     
@@ -46,9 +49,15 @@ class IgniterScene: SceneProtocol {
             aspectRatio: 19.5/9,
             nearZ: 1.0,
             farZ: 1000.0)
+        
+        for word in wordBank {
+            WordFoos.append(WordFoo(Word: word, Reward:Int.random(in: 1...5)))
+        }
+        
+        
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
-        wordRenderer.setWord(wordBank[currenWordIndex])
+        wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
         timer = TimeController()
         timer.start()
     }
@@ -68,9 +77,9 @@ class IgniterScene: SceneProtocol {
         }
     }
     
-    func changeWord() {
-        currenWordIndex = (currenWordIndex + 1) % wordBank.count //
-        wordRenderer.setWord(wordBank[currenWordIndex])
+    func NextFoo() {
+        currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
+        wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
     }
     
     // -- Encode is called by update.
@@ -86,21 +95,34 @@ class IgniterScene: SceneProtocol {
                 gameState.decrementTime(time: Double(timer.getTickSeconds()))
                 gameElapsedTime += Double(timer.getTickSeconds())
                 currentAnswerWindow += Double(timer.getTickSeconds())
-                print("captured answer:\(gameState.capturedAnser)")
+                // print("captured answer:\(gameState.CapturedAnswer)")
             }
             wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
         }
         
-        if(currentAnswerWindow > igniterConfig.timeWindow) {
-            changeWord()
+        
+        
+        if(currentAnswerWindow < igniterConfig.timeWindow) {
+            if wordRenderer.CurrentFoo.Word.lowercased() == gameState.CapturedAnswer.lowercased() {
+                gameState.incrementScore(increment: wordRenderer.CurrentFoo.Reward)
+                print("LOG: [Info] ----> corect answer. Strike \(strikeChain)")
+                gameState.CapturedAnswer = ""
+                currentAnswerWindow = 0.0
+                strikeChain += 1                
+                gameState.setStrike(value: strikeChain % igniterConfig.StrikeLimit == 0)
+                NextFoo()
+            }
+           // print("LOG: [Info] ----> \(gameState.CapturedAnswer)")
+        } else {
+            NextFoo()
+            strikeChain = 0
             currentAnswerWindow = 0
         }
         
         if(gameElapsedTime > igniterConfig.levelDuration) {
             gameState.setState(state: .stop)
             timer.stop()
-            wordRenderer.setWord("Game Over")
-            
+            wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
         }
         
         // TODO: Game should not control countDown/ start time
