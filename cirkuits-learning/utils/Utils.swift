@@ -40,7 +40,6 @@ func makeDefaultRenderPipeline(device: MTLDevice, vertexName: String, fragmentNa
     return pipelineState
 }
 
-
 func makeObjectRenderPipeline(device: MTLDevice, vertexName: String, fragmentName: String) -> MTLRenderPipelineState {
     let pipelineState: MTLRenderPipelineState!
     let library = device.makeDefaultLibrary()!

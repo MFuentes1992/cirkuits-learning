@@ -25,8 +25,9 @@ class SceneManager: SceneProtocol {
     }
     
     func setCurrentScene(sceneName: String) {
-        self.currentScene = IgniterScene(device: self.device, view: self.view,
-                                         gameState: self.gameState, currentWodIndex: 0);
+       self.currentScene = IgniterScene(device: self.device, view: self.view,
+                                         gameState: self.gameState, currentFooIndex: 0);
+       //self.currentScene = TextureScene(device: self.device)
         
     }
     
@@ -38,7 +39,7 @@ class SceneManager: SceneProtocol {
         self.currentScene.handlePinchGesture(gesture: gesture)
     }
     
-    func encode(encoder: any MTLRenderCommandEncoder) {
-        self.currentScene.encode(encoder: encoder)
+    func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
+        self.currentScene.encode(encoder: encoder, view: view)
     }    
 }

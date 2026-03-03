@@ -5,6 +5,7 @@
 //  Created by Marco Fuentes Jiménez on 31/08/25.
 //
 import simd
+import Speech
 
 extension float4x4 {
     init(translation t: SIMD3<Float>) {
@@ -41,5 +42,25 @@ extension float4x4 {
         self.columns.0.y = -sin(angle)
         self.columns.1.x = sin(angle)
         self.columns.1.y = cos(angle)
+    }
+}
+
+extension SFSpeechRecognizer {
+    static func hasAuthorizationToRecognize() async -> Bool {
+        await withCheckedContinuation { continuation in
+            requestAuthorization { status in
+                continuation.resume(returning: status == .authorized)
+            }
+        }
+    }
+}
+
+extension AVAudioSession {
+    func hasPermissionToRecord() async -> Bool {
+        await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { authorized in
+                continuation.resume(returning: authorized)
+            }
+        }
     }
 }

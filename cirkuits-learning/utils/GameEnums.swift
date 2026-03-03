@@ -10,3 +10,8 @@ enum PlayState {
     case running
     case initializing
 }
+
+enum MicrophoneState {
+    case muted
+    case unmuted
+}

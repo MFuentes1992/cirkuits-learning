@@ -10,6 +10,18 @@ class WordRenderer {
     private let device: MTLDevice
     private let pipelineState: MTLRenderPipelineState
     private let layoutManager: WordLayoutManager
+    private var currentFoo: WordFoo!
+    var CurrentFoo: WordFoo {
+        get { currentFoo }
+        set {
+            currentFoo = newValue;
+            do {
+                try layoutManager.setWord(word: currentFoo.Word)
+            } catch {
+                print(error.localizedDescription.cString(using: .utf8)!)
+            }
+        }
+    }
     private var uniformBuffer: MTLBuffer?
         
     init(device: MTLDevice,
@@ -27,13 +39,13 @@ class WordRenderer {
         uniformBuffer = device.makeBuffer(length: uniformsSize, options: [.storageModeShared])
     }
     
-    func setWord(_ word: String) {
+    /* func setWord(_ word: String) {
         do{
            try  layoutManager.setWord(word: word)
         } catch {
-                print(error.localizedDescription.cString(using: .utf8)!)
+                
         }
-    }
+    } */
     
     func update(deltaTime: Float) {
         layoutManager.update(deltaTime: deltaTime)
@@ -52,9 +64,7 @@ class WordRenderer {
             uniformsPointer[index] = Uniforms(
                 projectionMatrix:projectionMatrix,
                 viewMatrix: viewMatrix,
-                modelMatrix: transform,
-                lightPosition: SIMD3<Float>(0, 0, 10),
-                cameraPosition: SIMD3<Float>(0, 0, 500),
+                modelMatrix: transform
             )
         }
             

@@ -101,6 +101,8 @@ class ComboGauge: UIView {
         ])
     }
     
+
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         updateBarPaths()

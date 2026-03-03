@@ -70,4 +70,43 @@ class ObjLoader {
                     indexBuffer: indexBuffer!,
                     indexCount: indices.count), minX, maxX)
     }
+    
+    
+    //TODO: enhance to receive model path->extension via param
+    static func loadModel(device: MTLDevice) -> MTKMesh? {
+        guard let url = Bundle.main.url(forResource: "a_letter_texture", withExtension: "obj") else {
+            print("Failed to find a_letter_texture")
+            return nil
+        }
+        
+        let vertextDescriptor = MDLVertexDescriptor()
+        vertextDescriptor.attributes[0] = MDLVertexAttribute(name: MDLVertexAttributePosition, format: .float3, offset: 0, bufferIndex: 0)
+        vertextDescriptor.attributes[1] = MDLVertexAttribute(name: MDLVertexAttributeTextureCoordinate, format: .float2, offset: 12, bufferIndex: 0)
+        vertextDescriptor.layouts[0] = MDLVertexBufferLayout(stride: 20)
+        
+        let bufferAllocator = MTKMeshBufferAllocator(device: device)
+        let asset = MDLAsset(url: url, vertexDescriptor: vertextDescriptor, bufferAllocator: bufferAllocator)
+        
+        do {
+            let (_, mtkMeshes) = try MTKMesh.newMeshes(asset: asset, device: device)
+            if let letterAMesh = mtkMeshes.first {
+               return letterAMesh
+            }
+        } catch {
+            print("Error loading mesh: \(error.localizedDescription)")
+        }
+        return nil
+    }
+    //TODO: enhance to receive texture path->extension via param
+    static func loadTexture(device: MTLDevice) -> MTLTexture? {
+        let textureLoader = MTKTextureLoader(device: device)
+        guard let url = Bundle.main.url(forResource: "letter_A_texture_c", withExtension: "png") else { return nil }
+        let options: [MTKTextureLoader.Option: Any] = [.generateMipmaps: true, .SRGB: true]
+        do {
+            let texture = try textureLoader.newTexture(URL: url, options: options)
+        }catch {
+            print("Error while loading the texture")
+        }
+        return nil;
+    }
 }
