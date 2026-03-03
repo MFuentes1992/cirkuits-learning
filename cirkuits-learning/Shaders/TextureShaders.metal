@@ -3,7 +3,7 @@
 //  cirkuits-learning
 //
 //  Created by Marco Fuentes Jiménez on 14/02/26.
-//
+//  The purpose of this file is to make a PoC of loading a wavefront (.obj) and a texture (.png) and render into a scene.
 
 #include <metal_stdlib>
 using namespace metal;

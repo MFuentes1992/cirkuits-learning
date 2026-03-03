@@ -11,24 +11,22 @@ class SceneManager: SceneProtocol {
     var device: MTLDevice!
     var view: MTKView!
     var currentScene: SceneProtocol!
+    var scenes: [String: SceneProtocol]
     private var gameState: GameState!
-    // TODO: Create scene manager state machine
-    /* var scenes: [String: SceneProtocol] = [
-        "Igniter": IgniterScene(),
-        "Menu": MenuScene()
-    ] */
+   
     
     init(device: MTLDevice, view: MTKView, gameState: GameState) {
         self.device = device
         self.view = view
         self.gameState = gameState
+        self.scenes = [
+            "Igniter": IgniterScene(device: self.device, view: self.view,
+                                    gameState: self.gameState, currentFooIndex: 0),
+        ]
     }
     
     func setCurrentScene(sceneName: String) {
-       self.currentScene = IgniterScene(device: self.device, view: self.view,
-                                         gameState: self.gameState, currentFooIndex: 0);
-       //self.currentScene = TextureScene(device: self.device)
-        
+        currentScene = scenes[sceneName]
     }
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {

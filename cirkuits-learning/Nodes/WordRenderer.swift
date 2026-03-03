@@ -39,14 +39,6 @@ class WordRenderer {
         uniformBuffer = device.makeBuffer(length: uniformsSize, options: [.storageModeShared])
     }
     
-    /* func setWord(_ word: String) {
-        do{
-           try  layoutManager.setWord(word: word)
-        } catch {
-                
-        }
-    } */
-    
     func update(deltaTime: Float) {
         layoutManager.update(deltaTime: deltaTime)
     }

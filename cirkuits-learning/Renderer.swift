@@ -23,10 +23,6 @@ class Renderer:NSObject, MTKViewDelegate {
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
         sceneManager.setCurrentScene(sceneName: "Igniter")
         super.init()
-        /* speechRecognition = SpeechRecognizer()        
-        Task { @MainActor in
-            startRecording()
-        } */
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -40,22 +36,6 @@ class Renderer:NSObject, MTKViewDelegate {
     func handlePinchEvents(gesture: UIPinchGestureRecognizer) {
         sceneManager.handlePinchGesture(gesture: gesture)
     }
-    
-   /* @MainActor
-    func startRecording() {
-        print("Should start recording")
-        let _ = _Concurrency.Task {
-            do {
-                
-                let stream = speechRecognition.transcribe()
-                for try await partialResult in stream {                    
-                    print("voice input:\(partialResult)")
-                }
-            } catch {
-                print("voice input error: \(error.localizedDescription)")
-            }
-        }
-    } */
     
     func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,

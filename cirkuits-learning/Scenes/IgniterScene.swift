@@ -93,7 +93,6 @@ class IgniterScene: SceneProtocol {
                 gameState.decrementTime(time: Double(timer.getTickSeconds())) // This should be on the game state
                 gameElapsedTime += Double(timer.getTickSeconds())
                 currentAnswerWindow += Double(timer.getTickSeconds())
-                // print("captured answer:\(gameState.CapturedAnswer)")
             }
             wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
         }
@@ -115,7 +114,6 @@ class IgniterScene: SceneProtocol {
                 
                 NextFoo()
             }
-           // print("LOG: [Info] ----> \(gameState.CapturedAnswer)")
         } else {
             NextFoo()
             gameState.setStreak(value: 0)
@@ -127,14 +125,5 @@ class IgniterScene: SceneProtocol {
             timer.stop()
             wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
         }
-        
-        // TODO: Game should not control countDown/ start time
-        
-       /* if(Int.random(in: 1...100) == 1 && gameState.getCurrentState() == .running) {
-            gameState.incrementScore(increment: Int(igniterConfig.defaultPoints))
-            if(Int.random(in: 0...10) == 1) {
-                gameState.setStrike(value: true )
-            }
-        } */
     }
 }
