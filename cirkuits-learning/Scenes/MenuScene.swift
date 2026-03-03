@@ -7,7 +7,7 @@
 import MetalKit
 
 class MenuScene: SceneProtocol {
-    func encode(encoder: any MTLRenderCommandEncoder) {
+    func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
         
     }
     func handlePinchGesture(gesture: UIPinchGestureRecognizer) {

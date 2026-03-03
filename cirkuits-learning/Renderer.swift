@@ -63,7 +63,7 @@ class Renderer:NSObject, MTKViewDelegate {
         
         let commandBuffer = commandQueue.makeCommandBuffer()!
         let commandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)!
-        sceneManager.encode(encoder: commandEncoder)
+        sceneManager.encode(encoder: commandEncoder, view: view)
         commandEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()

@@ -19,8 +19,8 @@ struct Uniforms {
     float4x4 projectionMatrix;
     float4x4 viewMatrix;
     float4x4 modelMatrix;
-    float3 lightPosition;
-    float3 cameraPosition;
+//-- float3 lightPosition;
+//-- float3 cameraPosition;
 };
 
 struct TimeUniforms {

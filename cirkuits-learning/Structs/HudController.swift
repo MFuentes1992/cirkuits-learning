@@ -75,6 +75,7 @@ class HudController {
         pauseButton.tintColor = lookAndFeel.color
         pauseButton.addTarget(self, action: #selector(togglePause), for: .touchUpInside)
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
+        // pauseButton.isHidden = true
         parentView.addSubview(pauseButton)
         
         // Mute Button
@@ -118,10 +119,10 @@ class HudController {
             
             
             pauseButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -10),
+            pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
             
             microphoneButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            microphoneButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -60),
+            microphoneButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
             
             comboGauge.widthAnchor.constraint(equalToConstant: 120),
             comboGauge.heightAnchor.constraint(equalToConstant: 140),
@@ -190,10 +191,6 @@ class HudController {
     func updateScoreDisplay() {
         let formattedScoreString = String(format: "%d", gameState.getCurrentScore())
         scoreLabel.text = formattedScoreString
-        if(gameState.getStrike()) {
-            comboGauge.incrementCombo()
-            gameState.setStrike(value: false)
-        }
         
     }
     
@@ -210,6 +207,24 @@ class HudController {
             countDownLabel.isHidden = true
             countDownLabel.text = ""
             countDownLabel.removeFromSuperview()
+            UIView.animate(
+                withDuration: 1,
+                delay: 0,
+                options: .curveEaseOut,
+                animations: {
+                    self.pauseButton.transform = CGAffineTransform(translationX: -self.lookAndFeel.buttonSize - 20, y: 0)
+                    self.microphoneButton.transform = CGAffineTransform(translationX: -self.lookAndFeel.buttonSize - 70, y: 0)
+                    
+            })
+            
+            UIView.animate(
+                withDuration: 0.25,
+                delay: 0,
+                options: [.curveEaseInOut],
+                animations: {
+                    self.comboGauge.transform = CGAffineTransform(scaleX: 1.05, y: 1.05);
+                })
+                    
             gameState.setState(state: .running)
         }
     }

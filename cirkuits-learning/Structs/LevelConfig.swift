@@ -13,4 +13,5 @@ struct LevelConfig {
     var timeWindow: Double
     var levelDuration: Double
     var StrikeLimit: Int
+    var maxStreak:Int
 }

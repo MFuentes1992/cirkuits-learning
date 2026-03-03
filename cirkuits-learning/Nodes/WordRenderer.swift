@@ -64,9 +64,7 @@ class WordRenderer {
             uniformsPointer[index] = Uniforms(
                 projectionMatrix:projectionMatrix,
                 viewMatrix: viewMatrix,
-                modelMatrix: transform,
-                lightPosition: SIMD3<Float>(0, 0, 10),
-                cameraPosition: SIMD3<Float>(0, 0, 500),
+                modelMatrix: transform
             )
         }
             

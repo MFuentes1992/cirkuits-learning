@@ -8,11 +8,10 @@ import SwiftUI
 class GameState {
     private var combo: Int
     private var score: Int
-    private var strike: Bool
     // -- TODO: move to configuration file - persistance
     private var scoreLimit = 999
     private var highScore = 0
-    private var maxCombo = 4
+    private var maxCombo = 4 // max combo bars
     private var reminingTime: TimeInterval = 60
     
     private var gameState: PlayState
@@ -23,12 +22,13 @@ class GameState {
         get { capturedAnswer }
         set {capturedAnswer = newValue.components(separatedBy: .whitespaces).last ?? "" }
     }
+    private var streak: Int
     
     init(gameState: PlayState) {
         self.gameState = gameState
         self.combo = 0
         self.score = 0
-        self.strike = false
+        self.streak = 0
     }
     
     
@@ -56,14 +56,6 @@ class GameState {
 
     func setReminingTime(time: TimeInterval) {
         self.reminingTime = time
-    }
-    
-    func setStrike(value: Bool) {
-        strike = value
-    }
-    
-    func getStrike() -> Bool {
-        return strike
     }
     
     func decrementTime(time: TimeInterval) {
@@ -104,5 +96,17 @@ class GameState {
     
     func resetCombo() {
         combo = 0
+    }
+    
+    func getStreak() -> Int {
+        return streak
+    }
+    
+    func setStreak(value: Int)  {
+       streak = value
+    }
+    
+    func incrementStreak(value: Int) {
+        self.streak += value
     }
 }

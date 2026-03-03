@@ -9,22 +9,32 @@
 using namespace metal;
 
 struct VertexIn {
-    float3 position [[attribute(0)]];
-    float4 color   [[attribute(1)]];
+    simd_float3 position;
+    simd_float4 color;
 };
 
 struct VertexOut {
     float4 position [[position]];
-    float4 color;
+    float3 worldPos;
 };
 
-vertex VertexOut vertex_shader(const VertexIn vertexIn [[stage_in]]) {
+struct Uniforms {
+    float4x4 modelMatrix;
+};
+
+vertex VertexOut vertex_shader(uint vertexID [[vertex_id]],
+                               constant VertexIn *vertices [[buffer(0)]],
+                               constant Uniforms &uniforms [[buffer(1)]]) {
     VertexOut vertexOut;
-    vertexOut.position = float4(vertexIn.position, 1.0); // -- Last value is the "Normal"?
-    vertexOut.color = vertexIn.color;
+    float4 position4 = float4(vertices[vertexID].position, 1.0);
+    vertexOut.position =  uniforms.modelMatrix * position4;
+    vertexOut.worldPos = vertices[vertexID].position;
     return vertexOut;
 }
 
 fragment float4 fragment_shader(VertexOut in [[stage_in]]) {
-    return float4(in.color);
+    float3 normal = normalize(in.worldPos);
+    float3 lightDirection = normalize(float3(1.0,1.0,1.0));
+    float difuse = max(dot(normal, lightDirection), 0.2);
+    return float4(float3(1.0,1.0,1.0) * difuse, 1.0);
 }

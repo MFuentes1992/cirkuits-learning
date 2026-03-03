@@ -22,6 +22,35 @@ func makePerspectiveMatrix(fovY: Float, aspect: Float, nearZ: Float, farZ: Float
     ))
 }
 
+func matrix_float4x4_projection(degree: Float, aspect: Float, near: Float, far: Float) -> matrix_float4x4 {
+    let radians = degree * .pi / 180;
+    let y = 1 / tan(radians * 0.5)
+    let x = y / aspect
+    let z = far / (far - near)
+    
+    var matrix = matrix_identity_float4x4
+    matrix.columns.0.x = x
+    matrix.columns.1.y = y
+    matrix.columns.2.z = z
+    matrix.columns.2.w = 1
+    matrix.columns.3.z  = -(z * near)
+    matrix.columns.3.w = 0
+    
+    return matrix
+}
+
+func make_perspective_right_hand(fovY: Float, aspect: Float, nearZ: Float, farZ: Float) -> simd_float4x4 {
+    let yScale = 1 / tan(fovY * 0.5)
+    let xScale = yScale / aspect
+    let zScale = farZ / (nearZ - farZ)
+    return simd_float4x4(columns: (
+        SIMD4(xScale, 0, 0, 0),
+        SIMD4(0, yScale, 0, 0),
+        SIMD4(0, 0, zScale, -1),
+        SIMD4(0, 0, zScale * nearZ, 0)
+    ))
+}
+
 func makeLookAtMatrix(eye: SIMD3<Float>, center: SIMD3<Float>, up: SIMD3<Float>) -> simd_float4x4 {
     let z = normalize(eye - center)
     let x = normalize(cross(up, z))
@@ -59,6 +88,24 @@ func rotationMatrixX(degrees: Float) -> simd_float4x4 {
     )
 }
 
+func matrix_rotation(radians: Float, axis: simd_float3) -> simd_float4x4 {
+    let axis = simd_normalize(axis);
+    let ct = cos(radians);
+    let st = sin(radians);
+    let ci = 1 - ct;
+    let x = axis.x;
+    let y = axis.y;
+    let z = axis.z;
+    
+    return simd_float4x4(
+        simd_float4(ct + x * x * ci, y * x * ci + z * st, z * x * ci - y * st, 0),
+        simd_float4(x * y * ci - z * st, ct + y * y * ci, z * y * ci + x * st, 0),
+        simd_float4(x * z * ci + y * st, y * z * ci - x * st, ct + z * z * ci, 0),
+        simd_float4(0,0,0,1)
+    )
+    
+}
+
 func makeModelMatrix(position: SIMD3<Float>,
                      rotation: SIMD3<Float>,
                      scale: SIMD3<Float>) -> float4x4 {
@@ -72,4 +119,14 @@ func makeModelMatrix(position: SIMD3<Float>,
     
     // Orden típico: T * Rz * Ry * Rx * S
     return translation * rotationZ * rotationY * rotationX * scaling
+}
+
+
+func matrix_scale(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {
+    return simd_float4x4(
+        simd_float4(x, 0, 0, 0),
+        simd_float4(0, y, 0, 0),
+        simd_float4(0, 0, z, 0),
+        simd_float4(0, 0, 0, 1),
+    )
 }

@@ -15,7 +15,6 @@ class IgniterScene: SceneProtocol {
     private var device: MTLDevice!
     private var timer: TimeController!
     private var currentFooIndex: Int
-    private var strikeChain: Int
     private var igniterConfig: LevelConfig!
     private var gameElapsedTime: Double
     private var currentAnswerWindow: Double
@@ -25,7 +24,7 @@ class IgniterScene: SceneProtocol {
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
     
-    let wordBank = ["Articulate", "Enthusiastic", "Absolutely", "Particularly", "Extraordinary", "Specifically", "Uniquely", "Passionately", "Radiantly", "Eagerly"]
+    let wordBank = ["Articulate", "Enthusiastic", "Absolutely", "Particularly", "Extraordinary", "Specifically", "Uniquely", "Passionately", "Radiantly", "Eagerly", "Wednesday", "Comfortable", "Vegetable", "Clothes", "Jewelry", "Schedule", "Chocolate", "Library", "Temperature", "Specific", "Thorough", "Though", "Through", "Thought", "Enough", "Cough", "Bough", "Chaos", "Choir", "Island"]
 
     init(device: MTLDevice, view: MTKView, gameState: GameState,
          currentFooIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false,
@@ -35,8 +34,7 @@ class IgniterScene: SceneProtocol {
         self.currentFooIndex = currentFooIndex
         self.gameElapsedTime = 0
         self.currentAnswerWindow = 0
-        self.strikeChain = 0
-        igniterConfig = LevelConfig(timeWindow: 5, levelDuration: 60, StrikeLimit: 3)
+        igniterConfig = LevelConfig(timeWindow: 2, levelDuration: 60, StrikeLimit: 3, maxStreak: 7)
         buildInitialScene(view: view)
     }
     
@@ -51,12 +49,12 @@ class IgniterScene: SceneProtocol {
             farZ: 1000.0)
         
         for word in wordBank {
-            WordFoos.append(WordFoo(Word: word, Reward:Int.random(in: 1...5)))
+            WordFoos.append(WordFoo(Word: word, Reward: 1))
         }
         
         
         camera = Camera(settings: cameraSettings)
-        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
+        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width)) 
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
         timer = TimeController()
         timer.start()
@@ -83,7 +81,7 @@ class IgniterScene: SceneProtocol {
     }
     
     // -- Encode is called by update.
-    func encode(encoder: any MTLRenderCommandEncoder) {
+    func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
         timer.update()
         if(gameState.getCurrentState() == .stop) {
             return
@@ -92,7 +90,7 @@ class IgniterScene: SceneProtocol {
         if gameState.getCurrentState() == .running || gameState.getCurrentState() == .pause {
             if gameState.getCurrentState() != .pause {
                 wordRenderer.update(deltaTime: 1.0/60)
-                gameState.decrementTime(time: Double(timer.getTickSeconds()))
+                gameState.decrementTime(time: Double(timer.getTickSeconds())) // This should be on the game state
                 gameElapsedTime += Double(timer.getTickSeconds())
                 currentAnswerWindow += Double(timer.getTickSeconds())
                 // print("captured answer:\(gameState.CapturedAnswer)")
@@ -105,17 +103,22 @@ class IgniterScene: SceneProtocol {
         if(currentAnswerWindow < igniterConfig.timeWindow) {
             if wordRenderer.CurrentFoo.Word.lowercased() == gameState.CapturedAnswer.lowercased() {
                 gameState.incrementScore(increment: wordRenderer.CurrentFoo.Reward)
-                print("LOG: [Info] ----> corect answer. Strike \(strikeChain)")
+                print("LOG: [Info] ----> corect answer. Strike \(gameState.getStreak())")
                 gameState.CapturedAnswer = ""
                 currentAnswerWindow = 0.0
-                strikeChain += 1                
-                gameState.setStrike(value: strikeChain % igniterConfig.StrikeLimit == 0)
+                if gameState.getStreak() + 1 == igniterConfig.maxStreak {
+                    gameState.incrementCombo()
+                    gameState.setStreak(value: 0)
+                } else {
+                    gameState.incrementStreak(value: 1)
+                }
+                
                 NextFoo()
             }
            // print("LOG: [Info] ----> \(gameState.CapturedAnswer)")
         } else {
             NextFoo()
-            strikeChain = 0
+            gameState.setStreak(value: 0)
             currentAnswerWindow = 0
         }
         
