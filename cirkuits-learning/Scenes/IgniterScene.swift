@@ -82,7 +82,7 @@ class IgniterScene: SceneProtocol {
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
-        timer.update()
+        /* timer.update()
         if(gameState.getCurrentState() == .stop) {
             return
         }
@@ -124,6 +124,6 @@ class IgniterScene: SceneProtocol {
             gameState.setState(state: .stop)
             timer.stop()
             wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
-        }
+        } */
     }
 }

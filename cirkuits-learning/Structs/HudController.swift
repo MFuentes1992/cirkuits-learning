@@ -64,7 +64,7 @@ class HudController {
         countDownLabel.shadowColor = lookAndFeel.foreColor
         countDownLabel.shadowOffset = CGSize(width: 2, height: 2)
         countDownLabel.translatesAutoresizingMaskIntoConstraints = false
-        countDownLabel.text = "\(gameState.getCountDown())"
+        countDownLabel.text = "\(gameState.CountDown)"
         countDownLabel.isHidden = true
         parentView.addSubview(countDownLabel)
         
@@ -152,7 +152,7 @@ class HudController {
     }
     
     @objc func togglePause() {
-        var state = gameState.getCurrentState()
+        var state = gameState.CurrentState
         var iconName = "pause.circle.fill"
         if state == .running {
             state = .pause
@@ -160,7 +160,7 @@ class HudController {
         } else if state == .pause {
             state = .running
         }
-        gameState.setState(state: state)
+        gameState.CurrentState = state
         let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
         pauseButton.setImage(image, for: .normal)
@@ -170,7 +170,7 @@ class HudController {
         playButton.isHidden = true
         countDownLabel.isHidden = false
         parentView.setNeedsDisplay()
-        gameState.setState(state: .initializing)
+        gameState.CurrentState = .initializing
         time.start()
         Task {
             do {
@@ -182,27 +182,27 @@ class HudController {
     }
     
     func updateTimerDisplay() {
-        let minutes = Int(gameState.getReminingTime() / 60)
-        let seconds = Int(gameState.getReminingTime()) % 60
+        let minutes = Int(gameState.RemainingTime / 60)
+        let seconds = Int(gameState.RemainingTime) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
     }
     
     func updateScoreDisplay() {
-        let formattedScoreString = String(format: "%d", gameState.getCurrentScore())
+        let formattedScoreString = String(format: "%d", gameState.Score)
         scoreLabel.text = formattedScoreString
         
     }
     
     func updateCountDown() {
-        if gameState.getCurrentState() == .initializing {
+        if gameState.CurrentState == .initializing {
             time.update()
         }
-        if gameState.getCountDown() != 0 {
+        if gameState.CountDown != 0 {
             gameState.decrementCountDown(time: Double(time.getTickSeconds()))
-            let formattedScoreString = String(format: "%.0f", gameState.getCountDown())
+            let formattedScoreString = String(format: "%.0f", gameState.CountDown)
             countDownLabel.text = formattedScoreString
-        } else if gameState.getCurrentState() == .initializing {
+        } else if gameState.CurrentState == .initializing {
             time.stop()
             countDownLabel.isHidden = true
             countDownLabel.text = ""
@@ -225,7 +225,7 @@ class HudController {
                     self.comboGauge.transform = CGAffineTransform(scaleX: 1.05, y: 1.05);
                 })
                     
-            gameState.setState(state: .running)
+            gameState.CurrentState = .running
         }
     }
     
@@ -233,7 +233,7 @@ class HudController {
         updateTimerDisplay()
         updateScoreDisplay()
         updateCountDown()
-        if gameState.getCurrentState() == .initializing {
+        if gameState.CurrentState == .initializing {
             updateCountDown()
         }
     }
