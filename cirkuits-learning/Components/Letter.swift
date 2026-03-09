@@ -18,11 +18,13 @@ class Letter {
 
     init(letter: String, device: MTLDevice) {
         if(letter == " ") { return }
-        guard let url = Bundle.main.url(forResource: "\(letter.lowercased())_letter", withExtension: "obj") else {
-            fatalError("No se pudo encontrar letter en el bundle. \(letter)")
+        guard let letterAsset = NSDataAsset(name: "\(letter.lowercased())_letter") else {
+            fatalError("No se pudo encontrar letter en el assets bunddle. \(letter)")
         }
-        
-        let result = ObjLoader.loadMesh(from: url, device: device);
+        guard let content = String(data: letterAsset.data, encoding: .ascii) else {
+            fatalError("Cannot unwrap wavefront assets. \(letter)")
+        }        
+        let result = ObjLoader.loadMesh(content: content, device: device);
         mesh = result.0
         bbLeftX = result.1
         bbRightX = result.2

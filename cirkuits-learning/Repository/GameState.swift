@@ -10,10 +10,12 @@ class GameState {
     private var score: Int
     private var streak: StreakChain
     // -- TODO: move to configuration file - persistance
+    private var lives = 99
     private var scoreLimit = 999
     private var highScore = 0
     private var maxCombo = 4 // max combo bars
     private var remainingTime: TimeInterval = 99 // Total level
+    private var timer: TimeController!
     
     private var currentState: PlayState
     private var countDown: TimeInterval = TimeInterval(Initializers.initCountDown)
@@ -31,6 +33,10 @@ class GameState {
         get { score }
         set { score = newValue }
     }
+    var HighScore: Int {
+        get { return highScore }
+        set { highScore = max(highScore, newValue) }
+    }
     var Streak: StreakChain {
         get { streak }
         set { streak = newValue }
@@ -42,44 +48,19 @@ class GameState {
     var CountDown: TimeInterval {
         get { countDown }
     }
+    var Timer: TimeController {
+        get { return timer }
+        set { timer =  newValue }
+    }
+    var Combo:Int {
+        get { return combo }
+        set { combo = newValue }
+    }
     
     init(gameState: PlayState) {
         self.currentState = gameState
         self.combo = 0
         self.score = 0
         self.streak = .oneX
-    }
-    
-    
-    func incrementCombo() {
-        if combo < maxCombo {
-            combo += 1
-        }
-    }
-    
-    func incrementScore(increment: Int) {
-        if self.score + increment < scoreLimit {
-            self.score += increment
-        }
-    }
-    
-    func decrementTime(time: TimeInterval) {
-        if remainingTime > 0 {
-            self.remainingTime -= time
-        }
-    }
-    
-    func decrementCountDown(time: TimeInterval) {
-        if countDown > 0 {
-            countDown -= time
-        }
-    }
-    
-    func getHighScore() -> Int {
-        return max(score, highScore)
-    }
-    
-    func resetCombo() {
-        combo = 0
     }
 }

@@ -7,7 +7,7 @@
 import MetalKit
 
 class ObjLoader {
-    static func loadMesh(from url: URL, device: MTLDevice) -> (Mesh, minX: Float, maxX: Float) {
+    static func loadMesh(content: String, device: MTLDevice) -> (Mesh, minX: Float, maxX: Float) {
         var minX: Float = .greatestFiniteMagnitude
         var maxX: Float = -.greatestFiniteMagnitude
         
@@ -15,7 +15,6 @@ class ObjLoader {
         var normals: [SIMD3<Float>] = []
         var indices: [UInt16] = []
 
-        let content = try! String(contentsOf: url)
         let lines = content.components(separatedBy: .newlines)
 
         for line in lines {
