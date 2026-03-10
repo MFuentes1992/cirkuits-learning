@@ -25,7 +25,6 @@ class Renderer:NSObject, MTKViewDelegate {
         self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
         sceneManager.setCurrentScene(sceneName: "Igniter")
-        timer.start()
         super.init()
     }
     
@@ -53,9 +52,10 @@ class Renderer:NSObject, MTKViewDelegate {
         commandBuffer.present(drawable)
         commandBuffer.commit()
         
-        if gameState.CurrentState == .stop {
+        //TODO: We need to stop timmer on game over
+        /* if gameState.CurrentState == .stop {
             timer.stop()
-        }
+        } */
                 
         hudController.updateHud()
         

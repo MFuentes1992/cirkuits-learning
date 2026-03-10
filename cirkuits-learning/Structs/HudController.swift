@@ -17,7 +17,7 @@ class HudController {
     private var comboGauge: ComboGauge!
     private var gameState: GameState!
     private var speechRecognition: SpeechRecognizer
-    private var time: TimeController!
+    private var timer: TimeController!
     private var countDown: TimeInterval = 0
     private var remainingTime: TimeInterval = 0
     private var microphoneStatus: MicrophoneState
@@ -31,7 +31,6 @@ class HudController {
         microphoneStatus = .unmuted
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         speechRecognition = SpeechRecognizer(gameState: gameState)
-                
         setupHUD()
         updateTimerDisplay()
     }
@@ -170,7 +169,7 @@ class HudController {
         countDownLabel.isHidden = false
         parentView.setNeedsDisplay()
         gameState.CurrentState = .initializing
-        time.start()
+        gameState.Timer.start()
         Task {
             do {
                 try speechRecognition.startRecording()
@@ -181,6 +180,7 @@ class HudController {
     }
     
     func updateTimerDisplay() {
+        if gameState.CurrentState != .running { return }
         remainingTime -= Double(gameState.Timer.getTickSeconds())
         let minutes = Int(remainingTime / 60)
         let seconds = Int(remainingTime) % 60
@@ -189,20 +189,21 @@ class HudController {
     }
     
     func updateScoreDisplay() {
-        let formattedScoreString = String(format: "%d", gameState.Score)
+        let formattedScoreString = String(format: "00%d", gameState.Score)
         scoreLabel.text = formattedScoreString
         
     }
     
     func updateCountDown() {
         if gameState.CurrentState != .initializing { return }
-        if countDown >= 0 {
-            countDown -= Double(time.getTickSeconds())
+        if countDown != 0 {
+            countDown -= Double(gameState.Timer.getTickSeconds())
+            if countDown == 0 { return }
             let formattedScoreString = String(format: "%.0f", countDown)
             countDownLabel.text = formattedScoreString
         } else {
-            countDownLabel.isHidden = true
             countDownLabel.text = ""
+            countDownLabel.isHidden = true
             countDownLabel.removeFromSuperview()
             countDown = 0
             gameState.CountDown = 0
@@ -231,7 +232,6 @@ class HudController {
     func updateHud() {
         if gameState.ConfigLoaded && gameState.CurrentState == .stop {
             // TODO: We can display loading spinner
-            time = gameState.Timer
             countDown =  gameState.CountDown
             remainingTime = gameState.LevelDuration
         } else {

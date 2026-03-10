@@ -29,7 +29,7 @@ class SceneManager: SceneProtocol {
     func setCurrentScene(sceneName: String) {
         currentScene = scenes[sceneName]
         // -- Fetch scene configuraiton
-        let levelConfig = LevelConfig(timeWindow: 2, levelDuration: 60, lives: 3, levelCountDown: 3)
+        let levelConfig = LevelConfig(timeWindow: 2, levelDuration: 59, lives: 3, levelCountDown: 3)
         self.gameState.AnswerWindow = levelConfig.timeWindow
         self.gameState.LevelDuration = levelConfig.levelDuration
         self.gameState.Lives = levelConfig.lives
