@@ -13,13 +13,15 @@ class IgniterScene: SceneProtocol {
     private var cameraSettings: CameraSettings!
     private var camera: Camera!
     private var device: MTLDevice!
-    private var timer: TimeController!
     private var currentFooIndex: Int
-    private var igniterConfig: LevelConfig!
     private var gameElapsedTime: Double
     private var currentAnswerWindow: Double
     private var gameState: GameState!
     private var WordFoos = [WordFoo]()
+    
+    // -- Local Game Track
+    private var score: Int = 0
+    private var combo: Int = 0
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
@@ -34,7 +36,6 @@ class IgniterScene: SceneProtocol {
         self.currentFooIndex = currentFooIndex
         self.gameElapsedTime = 0
         self.currentAnswerWindow = 0
-        igniterConfig = LevelConfig(timeWindow: 2, levelDuration: 60, StrikeLimit: 3, maxStreak: 7)
         buildInitialScene(view: view)
     }
     
@@ -56,8 +57,6 @@ class IgniterScene: SceneProtocol {
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width)) 
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
-        timer = TimeController()
-        timer.start()
     }
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
@@ -82,6 +81,17 @@ class IgniterScene: SceneProtocol {
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
+        if gameState.CurrentState == .running {
+            if !gameState.IsAnswering {
+                gameElapsedTime += Double(gameState.Timer.getTickSeconds())
+                print("Elapsed time while NOT answering: \(gameElapsedTime)")
+            } else if gameState.CorrectAnswer {
+                NextFoo()
+                print("correct Answer, moving next...")
+            } else {
+                print("Player is taking time to answer....")
+            }
+        }
         /* timer.update()
         if(gameState.getCurrentState() == .stop) {
             return

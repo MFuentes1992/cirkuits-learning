@@ -18,7 +18,8 @@ class HudController {
     private var gameState: GameState!
     private var speechRecognition: SpeechRecognizer
     private var time: TimeController!
-    private var answerOffset: Int
+    private var countDown: TimeInterval = 0
+    private var remainingTime: TimeInterval = 0
     private var microphoneStatus: MicrophoneState
     private var microphoneButton: UIButton!
     
@@ -27,12 +28,10 @@ class HudController {
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
-        answerOffset = 0
         microphoneStatus = .unmuted
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         speechRecognition = SpeechRecognizer(gameState: gameState)
-        
-        time = TimeController()
+                
         setupHUD()
         updateTimerDisplay()
     }
@@ -64,7 +63,7 @@ class HudController {
         countDownLabel.shadowColor = lookAndFeel.foreColor
         countDownLabel.shadowOffset = CGSize(width: 2, height: 2)
         countDownLabel.translatesAutoresizingMaskIntoConstraints = false
-        countDownLabel.text = "\(gameState.CountDown)"
+        countDownLabel.text = "\(countDown)"
         countDownLabel.isHidden = true
         parentView.addSubview(countDownLabel)
         
@@ -182,8 +181,9 @@ class HudController {
     }
     
     func updateTimerDisplay() {
-        let minutes = Int(gameState.RemainingTime / 60)
-        let seconds = Int(gameState.RemainingTime) % 60
+        remainingTime -= Double(gameState.Timer.getTickSeconds())
+        let minutes = Int(remainingTime / 60)
+        let seconds = Int(remainingTime) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
     }
@@ -195,18 +195,17 @@ class HudController {
     }
     
     func updateCountDown() {
-        if gameState.CurrentState == .initializing {
-            time.update()
-        }
-        if gameState.CountDown != 0 {
-            gameState.decrementCountDown(time: Double(time.getTickSeconds()))
-            let formattedScoreString = String(format: "%.0f", gameState.CountDown)
+        if gameState.CurrentState != .initializing { return }
+        if countDown >= 0 {
+            countDown -= Double(time.getTickSeconds())
+            let formattedScoreString = String(format: "%.0f", countDown)
             countDownLabel.text = formattedScoreString
-        } else if gameState.CurrentState == .initializing {
-            time.stop()
+        } else {
             countDownLabel.isHidden = true
             countDownLabel.text = ""
             countDownLabel.removeFromSuperview()
+            countDown = 0
+            gameState.CountDown = 0
             UIView.animate(
                 withDuration: 1,
                 delay: 0,
@@ -230,10 +229,14 @@ class HudController {
     }
     
     func updateHud() {
-        updateTimerDisplay()
-        updateScoreDisplay()
-        updateCountDown()
-        if gameState.CurrentState == .initializing {
+        if gameState.ConfigLoaded && gameState.CurrentState == .stop {
+            // TODO: We can display loading spinner
+            time = gameState.Timer
+            countDown =  gameState.CountDown
+            remainingTime = gameState.LevelDuration
+        } else {
+            updateTimerDisplay()
+            updateScoreDisplay()
             updateCountDown()
         }
     }

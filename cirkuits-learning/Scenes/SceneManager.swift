@@ -11,11 +11,12 @@ class SceneManager: SceneProtocol {
     var device: MTLDevice!
     var view: MTKView!
     var currentScene: SceneProtocol!
-    var scenes: [String: SceneProtocol]
+    var scenes: [String: SceneProtocol]!
     private var gameState: GameState!
    
     
     init(device: MTLDevice, view: MTKView, gameState: GameState) {
+        self.gameState = gameState
         self.device = device
         self.view = view
         self.gameState = gameState
@@ -27,6 +28,13 @@ class SceneManager: SceneProtocol {
     
     func setCurrentScene(sceneName: String) {
         currentScene = scenes[sceneName]
+        // -- Fetch scene configuraiton
+        let levelConfig = LevelConfig(timeWindow: 2, levelDuration: 60, lives: 3, levelCountDown: 3)
+        self.gameState.AnswerWindow = levelConfig.timeWindow
+        self.gameState.LevelDuration = levelConfig.levelDuration
+        self.gameState.Lives = levelConfig.lives
+        self.gameState.CountDown = Double(levelConfig.levelCountDown)
+        self.gameState.ConfigLoaded = true
     }
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {

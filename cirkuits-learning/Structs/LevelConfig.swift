@@ -12,6 +12,6 @@ struct Initializers {
 struct LevelConfig {
     var timeWindow: Double
     var levelDuration: Double
-    var StrikeLimit: Int
-    var maxStreak:Int
+    var lives: Int
+    var levelCountDown: Int
 }
