@@ -11,24 +11,31 @@ class SceneManager: SceneProtocol {
     var device: MTLDevice!
     var view: MTKView!
     var currentScene: SceneProtocol!
+    var scenes: [String: SceneProtocol]!
     private var gameState: GameState!
-    // TODO: Create scene manager state machine
-    /* var scenes: [String: SceneProtocol] = [
-        "Igniter": IgniterScene(),
-        "Menu": MenuScene()
-    ] */
+   
     
     init(device: MTLDevice, view: MTKView, gameState: GameState) {
+        self.gameState = gameState
         self.device = device
         self.view = view
         self.gameState = gameState
+        self.scenes = [
+            "Igniter": IgniterScene(device: self.device, view: self.view,
+                                    gameState: self.gameState, currentFooIndex: 0),
+        ]
     }
     
     func setCurrentScene(sceneName: String) {
-       self.currentScene = IgniterScene(device: self.device, view: self.view,
-                                         gameState: self.gameState, currentFooIndex: 0);
-       //self.currentScene = TextureScene(device: self.device)
-        
+        currentScene = scenes[sceneName]
+        // -- Fetch configuraiton per loaded scene
+        let levelConfig = LevelConfig(timeToLive: 2.0, timeToAnswer: 2.0, levelDuration: 59, lives: 3, levelCountDown: 3)
+        self.gameState.WordTimeToLive = levelConfig.timeToLive
+        self.gameState.WordTimeToAnswer = levelConfig.timeToAnswer
+        self.gameState.LevelDuration = levelConfig.levelDuration
+        self.gameState.Lives = levelConfig.lives
+        self.gameState.CountDown = Double(levelConfig.levelCountDown)
+        self.gameState.ConfigLoaded = true
     }
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {

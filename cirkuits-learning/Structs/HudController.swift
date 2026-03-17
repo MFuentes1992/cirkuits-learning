@@ -17,22 +17,22 @@ class HudController {
     private var comboGauge: ComboGauge!
     private var gameState: GameState!
     private var speechRecognition: SpeechRecognizer
-    private var time: TimeController!
-    private var answerOffset: Int
+    private var timer: TimeController!
+    private var countDown: TimeInterval = 0
+    private var remainingTime: TimeInterval = 0
     private var microphoneStatus: MicrophoneState
     private var microphoneButton: UIButton!
+    private var prevComboState: Int = 0
     
     private var lookAndFeel: UILayoutLookAndFeel!
     
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
-        answerOffset = 0
+        prevComboState = gameState.Streak
         microphoneStatus = .unmuted
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         speechRecognition = SpeechRecognizer(gameState: gameState)
-        
-        time = TimeController()
         setupHUD()
         updateTimerDisplay()
     }
@@ -64,7 +64,7 @@ class HudController {
         countDownLabel.shadowColor = lookAndFeel.foreColor
         countDownLabel.shadowOffset = CGSize(width: 2, height: 2)
         countDownLabel.translatesAutoresizingMaskIntoConstraints = false
-        countDownLabel.text = "\(gameState.getCountDown())"
+        countDownLabel.text = "\(countDown)"
         countDownLabel.isHidden = true
         parentView.addSubview(countDownLabel)
         
@@ -97,7 +97,7 @@ class HudController {
         parentView.addSubview(playButton)
         
         //combo Gauge
-        comboGauge = ComboGauge()
+        comboGauge = ComboGauge(frame: CGRect(x: 0, y:0, width: 100, height: 100), maxCombo: gameState.MaxStreak)
         comboGauge.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(comboGauge)
         
@@ -152,7 +152,7 @@ class HudController {
     }
     
     @objc func togglePause() {
-        var state = gameState.getCurrentState()
+        var state = gameState.CurrentState
         var iconName = "pause.circle.fill"
         if state == .running {
             state = .pause
@@ -160,7 +160,7 @@ class HudController {
         } else if state == .pause {
             state = .running
         }
-        gameState.setState(state: state)
+        gameState.CurrentState = state
         let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         let image = UIImage(systemName: iconName, withConfiguration: config)
         pauseButton.setImage(image, for: .normal)
@@ -170,8 +170,8 @@ class HudController {
         playButton.isHidden = true
         countDownLabel.isHidden = false
         parentView.setNeedsDisplay()
-        gameState.setState(state: .initializing)
-        time.start()
+        gameState.CurrentState = .initializing
+        gameState.Timer.start()
         Task {
             do {
                 try speechRecognition.startRecording()
@@ -182,31 +182,32 @@ class HudController {
     }
     
     func updateTimerDisplay() {
-        let minutes = Int(gameState.getReminingTime() / 60)
-        let seconds = Int(gameState.getReminingTime()) % 60
+        if gameState.CurrentState != .running { return }
+        remainingTime -= Double(gameState.Timer.getTickSeconds())
+        let minutes = Int(remainingTime / 60)
+        let seconds = Int(remainingTime) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
     }
     
     func updateScoreDisplay() {
-        let formattedScoreString = String(format: "%d", gameState.getCurrentScore())
-        scoreLabel.text = formattedScoreString
-        
+        let formattedString = String(format: "%03d", gameState.Score)
+        scoreLabel.text = formattedString
     }
     
     func updateCountDown() {
-        if gameState.getCurrentState() == .initializing {
-            time.update()
-        }
-        if gameState.getCountDown() != 0 {
-            gameState.decrementCountDown(time: Double(time.getTickSeconds()))
-            let formattedScoreString = String(format: "%.0f", gameState.getCountDown())
+        if gameState.CurrentState != .initializing { return }
+        if countDown != 0 {
+            countDown -= Double(gameState.Timer.getTickSeconds())
+            if countDown == 0 { return }
+            let formattedScoreString = String(format: "%.0f", countDown)
             countDownLabel.text = formattedScoreString
-        } else if gameState.getCurrentState() == .initializing {
-            time.stop()
-            countDownLabel.isHidden = true
+        } else {
             countDownLabel.text = ""
+            countDownLabel.isHidden = true
             countDownLabel.removeFromSuperview()
+            countDown = 0
+            gameState.CountDown = 0
             UIView.animate(
                 withDuration: 1,
                 delay: 0,
@@ -225,16 +226,23 @@ class HudController {
                     self.comboGauge.transform = CGAffineTransform(scaleX: 1.05, y: 1.05);
                 })
                     
-            gameState.setState(state: .running)
+            gameState.CurrentState = .running
         }
     }
     
     func updateHud() {
-        updateTimerDisplay()
-        updateScoreDisplay()
-        updateCountDown()
-        if gameState.getCurrentState() == .initializing {
+        if gameState.ConfigLoaded && gameState.CurrentState == .stop {
+            // TODO: We can display loading spinner
+            countDown =  gameState.CountDown
+            remainingTime = gameState.LevelDuration
+        } else {
+            updateTimerDisplay()
+            updateScoreDisplay()
             updateCountDown()
+            if prevComboState != gameState.Streak {
+                prevComboState = gameState.Streak
+                comboGauge.incrementCombo(value: gameState.Streak)
+            }
         }
     }
 }
