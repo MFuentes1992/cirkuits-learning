@@ -22,7 +22,8 @@ class GameState {
     private var isAnswering: Bool = false
     private var correctanswer: Bool = false
     private var nextWordFoo: Bool = false
-    private var answerWindow: TimeInterval!
+    private var wordTimeToLive: TimeInterval!
+    private var wordTimeToAnswer: TimeInterval!
     
     
     var CapturedAnswer: String {
@@ -67,10 +68,15 @@ class GameState {
     }
     var CorrectAnswer: Bool {
         get { return correctanswer }
+        set { correctanswer = newValue }
     }
-    var AnswerWindow: TimeInterval {
-        get { return answerWindow }
-        set { answerWindow = newValue }
+    var WordTimeToLive: TimeInterval {
+        get { return wordTimeToLive }
+        set { wordTimeToLive = newValue }
+    }
+    var WordTimeToAnswer: TimeInterval {
+        get { return wordTimeToAnswer }
+        set { wordTimeToAnswer = newValue }
     }
     var NextWordFoo: Bool {
         get { return nextWordFoo }

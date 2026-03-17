@@ -189,9 +189,8 @@ class HudController {
     }
     
     func updateScoreDisplay() {
-        let formattedScoreString = String(format: "00%d", gameState.Score)
-        scoreLabel.text = formattedScoreString
-        
+        let formattedString = String(format: "%03d", gameState.Score)
+        scoreLabel.text = formattedString
     }
     
     func updateCountDown() {

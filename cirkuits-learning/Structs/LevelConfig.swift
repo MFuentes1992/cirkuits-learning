@@ -10,7 +10,8 @@ struct Initializers {
 }
 
 struct LevelConfig {
-    var timeWindow: Double
+    var timeToLive: Double
+    var timeToAnswer: Double
     var levelDuration: Double
     var lives: Int
     var levelCountDown: Int

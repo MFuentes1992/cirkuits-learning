@@ -14,6 +14,8 @@ class IgniterScene: SceneProtocol {
     private var camera: Camera!
     private var device: MTLDevice!
     private var currentFooIndex: Int
+    private var timeToAnswer: Double
+    private var wordTimeToLive: Double
     private var gameElapsedTime: Double
     private var currentAnswerWindow: Double
     private var gameState: GameState!
@@ -34,8 +36,10 @@ class IgniterScene: SceneProtocol {
         self.device = device
         self.gameState = gameState
         self.currentFooIndex = currentFooIndex
-        self.gameElapsedTime = 0
+        self.timeToAnswer = 0
+        self.wordTimeToLive = 0
         self.currentAnswerWindow = 0
+        self.gameElapsedTime = 0
         buildInitialScene(view: view)
     }
     
@@ -74,66 +78,52 @@ class IgniterScene: SceneProtocol {
         }
     }
     
-    func NextFoo() {
+    func nextFoo(reward: Int) {
+        score += reward
         currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
+    }
+    
+    func resetTimers() {
+        timeToAnswer = 0
+        wordTimeToLive = 0
+        gameState.IsAnswering = false
     }
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
         if gameState.CurrentState == .running {
+            gameElapsedTime += Double(gameState.Timer.getTickSeconds())
             if !gameState.IsAnswering {
-                gameElapsedTime += Double(gameState.Timer.getTickSeconds())
-                print("Elapsed time while NOT answering: \(gameElapsedTime)")
-            } else if gameState.CorrectAnswer {
-                NextFoo()
-                print("correct Answer, moving next...")
-            } else {
-                print("Player is taking time to answer....")
-            }
-        }
-        /* timer.update()
-        if(gameState.getCurrentState() == .stop) {
-            return
-        }
-                
-        if gameState.getCurrentState() == .running || gameState.getCurrentState() == .pause {
-            if gameState.getCurrentState() != .pause {
-                wordRenderer.update(deltaTime: 1.0/60)
-                gameState.decrementTime(time: Double(timer.getTickSeconds())) // This should be on the game state
-                gameElapsedTime += Double(timer.getTickSeconds())
-                currentAnswerWindow += Double(timer.getTickSeconds())
-            }
-            wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
-        }
-        
-        
-        
-        if(currentAnswerWindow < igniterConfig.timeWindow) {
-            if wordRenderer.CurrentFoo.Word.lowercased() == gameState.CapturedAnswer.lowercased() {
-                gameState.incrementScore(increment: wordRenderer.CurrentFoo.Reward)
-                print("LOG: [Info] ----> corect answer. Strike \(gameState.getStreak())")
-                gameState.CapturedAnswer = ""
-                currentAnswerWindow = 0.0
-                if gameState.getStreak() + 1 == igniterConfig.maxStreak {
-                    gameState.incrementCombo()
-                    gameState.setStreak(value: 0)
-                } else {
-                    gameState.incrementStreak(value: 1)
+                wordTimeToLive += Double(gameState.Timer.getTickSeconds())
+                print("Elapsed time while NOT answering: \(wordTimeToLive) -- \(WordFoos[currentFooIndex])")
+                if wordTimeToLive > gameState.WordTimeToLive {
+                    nextFoo(reward: 0)
+                    resetTimers()
                 }
-                
-                NextFoo()
+            } else if gameState.CorrectAnswer {
+                nextFoo(reward: WordFoos[currentFooIndex].Reward)
+                gameState.IsAnswering = false
+                gameState.CorrectAnswer = false
+                resetTimers()
+                print("correct Answer, moving onto next...")
+            } else {
+                timeToAnswer += Double(gameState.Timer.getTickSeconds())
+                if timeToAnswer >= gameState.WordTimeToAnswer {
+                    gameState.IsAnswering = false
+                    nextFoo(reward: 0)
+                    resetTimers()
+                    return
+                }
+                gameState.CorrectAnswer = WordFoos[currentFooIndex].Word.compare(gameState.CapturedAnswer, options: .caseInsensitive) == .orderedSame
+                print("Player is taking time to answer.... \(gameState.CapturedAnswer)")
             }
-        } else {
-            NextFoo()
-            gameState.setStreak(value: 0)
-            currentAnswerWindow = 0
+            if gameElapsedTime >= gameState.LevelDuration {
+                gameState.CurrentState = .stop
+                wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
+            }
         }
-        
-        if(gameElapsedTime > igniterConfig.levelDuration) {
-            gameState.setState(state: .stop)
-            timer.stop()
-            wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
-        } */
+        gameState.Score = score
+        wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
 }
