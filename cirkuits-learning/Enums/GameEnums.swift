@@ -11,12 +11,6 @@ enum PlayState {
     case initializing
 }
 
-enum StreakChain {
-    case oneX
-    case threeX
-    case sevenX
-}
-
 enum MicrophoneState {
     case muted
     case unmuted

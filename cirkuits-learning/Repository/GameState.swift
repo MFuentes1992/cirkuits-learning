@@ -8,7 +8,6 @@ import SwiftUI
 class GameState {
     private var combo: Int
     private var score: Int
-    private var streak: StreakChain
     // -- TODO: move to configuration file - persistance
     private var lives: Int!
     private var highScore: Int
@@ -24,6 +23,8 @@ class GameState {
     private var nextWordFoo: Bool = false
     private var wordTimeToLive: TimeInterval!
     private var wordTimeToAnswer: TimeInterval!
+    private var maxStreak: Int = 0
+    private var streak: Int = 0
     
     
     var CapturedAnswer: String {
@@ -46,10 +47,6 @@ class GameState {
         get { return highScore }
         set { highScore = max(highScore, newValue) }
     }
-    var Streak: StreakChain {
-        get { streak }
-        set { streak = newValue }
-    }
     var CurrentState: PlayState {
         get { currentState }
         set { currentState = newValue }
@@ -65,6 +62,14 @@ class GameState {
     var Combo:Int {
         get { return combo }
         set { combo = newValue }
+    }
+    var MaxStreak:Int {
+        get { return maxStreak }
+        set { maxStreak = newValue }
+    }
+    var Streak:Int {
+        get { return streak }
+        set { streak = newValue }
     }
     var CorrectAnswer: Bool {
         get { return correctanswer }
@@ -97,6 +102,6 @@ class GameState {
         self.combo = 0
         self.score = 0
         self.highScore = 0
-        self.streak = .oneX
+        self.maxStreak = 3
     }
 }

@@ -22,12 +22,14 @@ class HudController {
     private var remainingTime: TimeInterval = 0
     private var microphoneStatus: MicrophoneState
     private var microphoneButton: UIButton!
+    private var prevComboState: Int = 0
     
     private var lookAndFeel: UILayoutLookAndFeel!
     
     init(parentView: UIView, gameState: GameState) {
         self.parentView = parentView
         self.gameState = gameState
+        prevComboState = gameState.Streak
         microphoneStatus = .unmuted
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         speechRecognition = SpeechRecognizer(gameState: gameState)
@@ -95,7 +97,7 @@ class HudController {
         parentView.addSubview(playButton)
         
         //combo Gauge
-        comboGauge = ComboGauge()
+        comboGauge = ComboGauge(frame: CGRect(x: 0, y:0, width: 100, height: 100), maxCombo: gameState.MaxStreak)
         comboGauge.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(comboGauge)
         
@@ -237,6 +239,10 @@ class HudController {
             updateTimerDisplay()
             updateScoreDisplay()
             updateCountDown()
+            if prevComboState != gameState.Streak {
+                prevComboState = gameState.Streak
+                comboGauge.incrementCombo(value: gameState.Streak)
+            }
         }
     }
 }

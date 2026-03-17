@@ -7,7 +7,7 @@
 import UIKit
 
 class ComboGauge: UIView {
-    private let maxCombo = 4
+    private var maxCombo = 4
     private var combo: Int = 0 {
         didSet {
             updateGauge()
@@ -18,8 +18,9 @@ class ComboGauge: UIView {
     private var barOutlineLayers: [CAShapeLayer] = []
     private let badgeLabel = UILabel()
     private let comboLabel = UILabel()
-    
-    override init(frame: CGRect) {
+        
+    init(frame: CGRect, maxCombo: Int) {
+        self.maxCombo = maxCombo
         super.init(frame: frame)
         setupGauge()
     }
@@ -70,7 +71,7 @@ class ComboGauge: UIView {
         badge.addSubview(badgeLabel)
         
         // "COMBO" text
-        comboLabel.text = "COMBO"
+        comboLabel.text = "STREAK"
         comboLabel.font = .systemFont(ofSize: 24, weight: .black)
         comboLabel.textColor = .white
         comboLabel.textAlignment = .center
@@ -172,10 +173,8 @@ class ComboGauge: UIView {
         combo = min(max(0, value), maxCombo)
     }
     
-    func incrementCombo() {
-        if combo < maxCombo {
-            combo += 1
-        }
+    func incrementCombo(value: Int) {
+        combo =  value % (maxCombo + 1)
     }
     
     func resetCombo() {
