@@ -104,4 +104,16 @@ class GameState {
         self.highScore = 0
         self.maxStreak = 3
     }
+    
+    func reset() {
+        score = 0
+        combo = 0
+        streak = 0
+        capturedAnswer = ""
+        isAnswering = false
+        correctanswer = false
+        nextWordFoo = false
+        currentState = .stop
+        configLoaded = false
+    }
 }

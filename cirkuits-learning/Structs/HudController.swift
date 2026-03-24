@@ -240,7 +240,7 @@ class HudController {
             updateScoreDisplay()
             updateCountDown()
             if prevComboState != gameState.Streak {
-                prevComboState = gameState.Streak
+            prevComboState = gameState.Streak
                 comboGauge.incrementCombo(value: gameState.Streak)
             }
         }

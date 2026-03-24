@@ -15,3 +15,12 @@ enum MicrophoneState {
     case muted
     case unmuted
 }
+
+enum GameScenes {
+    case CountDown
+    case Igniter
+    case GameOver
+}
+
+
+let MaxStreak = 3

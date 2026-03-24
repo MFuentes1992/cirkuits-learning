@@ -20,6 +20,7 @@ class IgniterScene: SceneProtocol {
     private var streakChain: Int
     private var currentAnswerWindow: Double
     private var gameState: GameState!
+    private var hud: IgniterHUD
     private var WordFoos = [WordFoo]()
     
     // -- Local Game Track
@@ -91,17 +92,21 @@ class IgniterScene: SceneProtocol {
         "activate", "activates"
     ]
 
+    private var gameOverTriggered = false
+    private var requestScene: (GameScenes) -> Void
+
     init(device: MTLDevice, view: MTKView, gameState: GameState,
-         currentFooIndex: Int = 0, isGameOver: Bool = false, isPaused: Bool = false,
-         score: Double = 0, strikeCount: Int = 0) {
+         currentFooIndex: Int = 0, requestScene: @escaping (GameScenes) -> Void) {
         self.device = device
         self.gameState = gameState
+        self.requestScene = requestScene
         self.currentFooIndex = currentFooIndex
         self.timeToAnswer = 0
         self.wordTimeToLive = 0
         self.currentAnswerWindow = 0
         self.gameElapsedTime = 0
         self.streakChain = 0
+        hud = IgniterHUD(parentView: view, gameState: gameState)
         buildInitialScene(view: view)
     }
     
@@ -183,11 +188,12 @@ class IgniterScene: SceneProtocol {
                 gameState.CorrectAnswer = WordFoos[currentFooIndex].Word.compare(gameState.CapturedAnswer, options: .caseInsensitive) == .orderedSame
                 // print("Player is taking time to answer.... \(gameState.CapturedAnswer)")
             }
-            if gameElapsedTime >= gameState.LevelDuration {
-                gameState.CurrentState = .stop
-                wordRenderer.CurrentFoo = WordFoo(Word: "Game Over", Reward: 0)
+            if gameElapsedTime >= gameState.LevelDuration && !gameOverTriggered {
+                gameOverTriggered = true
+                gameState.HighScore = gameState.Score
+                requestScene(.GameOver)
             }
-            print("streak:\(combo)")
+            hud.updateTimerDisplay()
         }
        
         if streakChain == gameState.MaxStreak + 1 {
