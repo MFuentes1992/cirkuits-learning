@@ -9,6 +9,7 @@ import simd
 import os
 import MetalKit
 
+@MainActor
 class IgniterScene: SceneProtocol {
     private var wordRenderer: WordRenderer!
     private var cameraSettings: CameraSettings!
@@ -53,18 +54,47 @@ class IgniterScene: SceneProtocol {
         self.gameElapsedTime = 0
         self.wordStartSec = 0
         self.streakChain = 0
-        self.speechRecognition = SpeechRecognizer(gameState: gameState)
-        hud = IgniterHUD(parentView: view, gameState: gameState)
+        self.speechRecognition = SpeechRecognizer()
+        hud = IgniterHUD(parentView: view, gameState: gameState, speechRecognizer: speechRecognition)
         buildInitialScene(view: view)
-        Task {
-            do {
-                try speechRecognition.startRecording()
-            } catch {
-                print("Cannot start recording...")
-            }
-        }
+        setupSpeechRecognition()
+        
         gameState.Timer.StartTime = Date().timeIntervalSince1970
         gameElapsedTime = gameState.Timer.getElapsedTime()
+    }
+    
+    private func setupSpeechRecognition() {
+        // Configure callbacks
+        speechRecognition.onTranscriptionUpdate = { [weak self] transcript in
+            guard let self = self else { return }
+            self.gameState.CapturedAnswer = transcript
+            self.gameState.PlayerState = .Speaking
+        }
+        
+        speechRecognition.onStateChange = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .idle:
+                self.gameState.PlayerState = .Idle
+            case .recording:
+                self.logger.info("Speech recognition started")
+            case .processing:
+                self.logger.info("Processing speech...")
+            case .error(let error):
+                self.logger.error("Speech recognition error: \(error.localizedDescription)")
+            }
+        }
+        
+        // Request authorization and start recording
+        Task {
+            do {
+                try await speechRecognition.requestAuthorization()
+                try await speechRecognition.startRecording()
+                logger.info("Speech recognition initialized successfully")
+            } catch {
+                logger.error("Failed to initialize speech recognition: \(error.localizedDescription)")
+            }
+        }
     }
     
     func buildInitialScene(view: MTKView) {

@@ -7,6 +7,7 @@ import Foundation
 //  Created by Marco Fuentes Jiménez on 04/06/25.
 //
 
+@MainActor
 class Renderer:NSObject, MTKViewDelegate {
     let device:MTLDevice
     let commandQueue:MTLCommandQueue!

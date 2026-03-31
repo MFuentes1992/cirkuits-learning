@@ -7,6 +7,7 @@
 import MetalKit
 
 
+@MainActor
 class SceneManager: SceneProtocol {
     var device: MTLDevice!
     var view: MTKView!

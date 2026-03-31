@@ -15,13 +15,13 @@ class IgniterHUD {
     private var microphoneButton: UIButton
     private var parentView: UIView
     private var microphoneState: MicrophoneState
-    private var speechRecognition: SpeechRecognizer
+    private weak var speechRecognition: SpeechRecognizer?
     private var comboGauge: ComboGauge
     private var lookAndFeel: UILayoutLookAndFeel
     private var gameState: GameState
     private var levelRemainingTime: TimeInterval
 
-    init(parentView: UIView, gameState: GameState) {
+    init(parentView: UIView, gameState: GameState, speechRecognizer: SpeechRecognizer? = nil) {
         self.gameState = gameState
         self.parentView = parentView
         self.timerLabel = UILabel()
@@ -31,7 +31,7 @@ class IgniterHUD {
         self.levelRemainingTime = gameState.LevelDuration
         self.comboGauge = ComboGauge(frame: CGRect(x: 0, y:0, width: 100, height: 100), maxCombo: MaxStreak)
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
-        speechRecognition = SpeechRecognizer(gameState: gameState)
+        self.speechRecognition = speechRecognizer
         microphoneState = .unmuted
         setUpHUD()
     }
@@ -105,17 +105,23 @@ class IgniterHUD {
     }
     
     @objc func toggleMute() {
+        guard let speechRecognition = speechRecognition else { return }
+        
         var iconName = "microphone.slash.circle.fill"
         if microphoneState == .unmuted {
             microphoneState = .muted
-            speechRecognition.stopTranscribing()
+            Task { @MainActor in
+                speechRecognition.stop()
+            }
         } else {
             microphoneState = .unmuted
             iconName = "microphone.circle.fill"
-            do {
-                try speechRecognition.startRecording()
-            } catch {
-                print("Cannot start recording...")
+            Task { @MainActor in
+                do {
+                    try await speechRecognition.startRecording()
+                } catch {
+                    print("Cannot start recording: \(error.localizedDescription)")
+                }
             }
         }
         let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
