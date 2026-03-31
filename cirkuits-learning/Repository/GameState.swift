@@ -16,6 +16,7 @@ class GameState {
     private var configLoaded: Bool = false
     
     private var currentState: PlayState
+    private var playerState: PlayerState
     private var countDown: TimeInterval!
     private var capturedAnswer: String = ""
     private var isAnswering: Bool = false
@@ -94,9 +95,14 @@ class GameState {
         get { return configLoaded }
         set { configLoaded = newValue }
     }
+    var PlayerState: PlayerState {
+        get { return playerState }
+        set { playerState = newValue }
+    }
     
     init(gameState: PlayState, timer: TimeController) {
         self.currentState = gameState
+        self.playerState = .Idle
         self.timer = timer
         
         self.combo = 0

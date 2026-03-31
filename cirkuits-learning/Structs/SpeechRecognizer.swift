@@ -76,8 +76,7 @@ class SpeechRecognizer {
                 if let result = result {
                     let newText = result.bestTranscription.formattedString
                     gameState?.CapturedAnswer = newText
-                    gameState?.IsAnswering = true
-                   // print("Voice captured:\(newText)")
+                    gameState?.PlayerState = .Speaking
                     // True when engine is stopped
                     if result.isFinal {
                         self.reset()

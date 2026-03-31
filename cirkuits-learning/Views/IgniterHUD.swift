@@ -138,11 +138,16 @@ class IgniterHUD {
         pauseButton.setImage(image, for: .normal)
     }
     
-    func updateTimerDisplay() {
-        levelRemainingTime -= Double(gameState.Timer.getTickSeconds())
+    func updateTimerDisplay(gameElapsedTime: Double) {
+        levelRemainingTime =  gameState.LevelDuration - gameElapsedTime
         let minutes = Int(levelRemainingTime / 60)
         let seconds = Int(levelRemainingTime) % 60
         let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
         timerLabel.text = formattedTimerString
+    }
+    
+    func updateHudScore(score: Int) {
+        let formattedString = String(format: "%03d", gameState.Score)
+        scoreLabel.text = formattedString
     }
 }
