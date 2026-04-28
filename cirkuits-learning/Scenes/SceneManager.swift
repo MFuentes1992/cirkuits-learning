@@ -50,7 +50,7 @@ class SceneManager: SceneProtocol {
                                 })
         }
         currentScene = tmp
-        let levelConfig = LevelConfig(timeToLive: 2.0, timeToAnswer: 2.0, levelDuration: 16, lives: 3, levelCountDown: 3)
+        let levelConfig = LevelConfig(timeToLive: 2.0, timeToAnswer: 2.0, levelDuration: 26, lives: 3, levelCountDown: 3)
         self.gameState.WordTimeToLive = levelConfig.timeToLive
         self.gameState.WordTimeToAnswer = levelConfig.timeToAnswer
         self.gameState.LevelDuration = levelConfig.levelDuration

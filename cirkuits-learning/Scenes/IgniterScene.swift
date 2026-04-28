@@ -7,6 +7,7 @@
 
 import simd
 import os
+import Speech
 import MetalKit
 
 @MainActor
@@ -25,7 +26,10 @@ class IgniterScene: SceneProtocol {
     private var gameState: GameState!
     private var hud: IgniterHUD
     private var WordFoos = [WordFoo]()
+    private var spRecTaskHint: SFSpeechRecognitionTaskHint
     private var speechRecognition: SpeechRecognizer
+    
+    var answer = ""
 
     // -- Telemetry
     let logger = Logger(subsystem: "com.cirkuits.igniter", category: "GameLoop")
@@ -37,7 +41,23 @@ class IgniterScene: SceneProtocol {
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
     
-    let wordBank: [String] = ["I", "You", "He", "She", "It", "We", "You", "They"]
+    let wordBank: [String] = [
+        "I am",
+        "You are",
+        "He is",
+        "She is",
+        "It is",
+        "We are",
+        "They are",
+        "We won",
+        "I see you",
+        "She is happy",
+        "He is sad",
+        "I am tired",
+        "You are kind",
+        "We are friends",
+        "They are here"
+    ]
 
     private var gameOverTriggered = false
     private var requestScene: (GameScenes) -> Void
@@ -54,7 +74,9 @@ class IgniterScene: SceneProtocol {
         self.gameElapsedTime = 0
         self.wordStartSec = 0
         self.streakChain = 0
-        self.speechRecognition = SpeechRecognizer()
+        // self.spRecTaskHint = wordBank[0].contains(" ") ? .search : .confirmation
+        self.spRecTaskHint = .confirmation
+        self.speechRecognition = SpeechRecognizer(taskHint: spRecTaskHint)
         hud = IgniterHUD(parentView: view, gameState: gameState, speechRecognizer: speechRecognition)
         buildInitialScene(view: view)
         setupSpeechRecognition()
@@ -67,7 +89,7 @@ class IgniterScene: SceneProtocol {
         // Configure callbacks
         speechRecognition.onTranscriptionUpdate = { [weak self] transcript in
             guard let self = self else { return }
-            self.gameState.CapturedAnswer = transcript
+            self.gameState.appendSpeechResult(transcript:sanitizeText(text:transcript))
             self.gameState.PlayerState = .Speaking
         }
         
@@ -113,7 +135,7 @@ class IgniterScene: SceneProtocol {
         
         
         camera = Camera(settings: cameraSettings)
-        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width)) 
+        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
     }
     
@@ -159,13 +181,14 @@ class IgniterScene: SceneProtocol {
                     gameState.PlayerState = .Idle
                     wordStartSec = gameState.Timer.getElapsedTime()
                 }
-                let isCorrect = WordFoos[currentFooIndex].Word.compare(gameState.CapturedAnswer, options: .caseInsensitive) == .orderedSame
+                let isCorrect = sanitizeText(text: WordFoos[currentFooIndex].Word) == sanitizeText(text: answer)
                 if isCorrect {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
                     streakChain += 1
                     wordStartSec = gameState.Timer.getElapsedTime()
+                    hud.showCorrectFeedback()
                 }
                 logger.info("Is correct: \(isCorrect)")
                 logger.info("Time to answer: \(self.timeToAnswer)")

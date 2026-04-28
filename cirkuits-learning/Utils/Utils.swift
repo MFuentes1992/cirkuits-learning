@@ -61,14 +61,19 @@ func makeObjectRenderPipeline(device: MTLDevice, vertexName: String, fragmentNam
     vertexDescriptor.attributes[1].bufferIndex = 0
     
     vertexDescriptor.layouts[0].stride = MemoryLayout<ObjVertex>.stride
-    
+
     pipelineDescriptor.vertexDescriptor = vertexDescriptor
-    
-    
+
+
     do {
         pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     } catch let error {
         fatalError("Error building pipeline state: \(error)")
     }
     return pipelineState
+}
+
+func sanitizeText(text: String) -> String {
+    let sanitized = text.replacing(/[\ .,]/, with: "")
+    return sanitized.lowercased()
 }

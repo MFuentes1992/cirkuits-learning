@@ -63,6 +63,7 @@ class SpeechRecognizer: NSObject {
     private var audioEngine: AVAudioEngine?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var taskHint: SFSpeechRecognitionTaskHint
     private let logger = Logger(subsystem: "com.cirkuits.igniter", category: "SpeechRecognizer")
     
     private(set) var currentState: RecognitionState = .idle
@@ -76,8 +77,9 @@ class SpeechRecognizer: NSObject {
     
     // MARK: - Initialization
     
-    init(locale: Locale = .current) {
+    init(taskHint: SFSpeechRecognitionTaskHint, locale: Locale = .current) {
         self.recognizer = SFSpeechRecognizer(locale: locale)
+        self.taskHint = taskHint
         super.init()
         
         // Monitor recognizer availability
@@ -146,36 +148,13 @@ class SpeechRecognizer: NSObject {
             let (engine, request) = try await prepareEngine()
             self.audioEngine = engine
             self.request = request
-            
+
             updateState(.recording)
-            
-            // Start recognition task
-            self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    
-                    if let error = error {
-                        self.logger.error("Recognition error: \(error.localizedDescription)")
-                        self.updateState(.error(error))
-                        self.stop()
-                        return
-                    }
-                    
-                    if let result = result {
-                        let transcript = result.bestTranscription.formattedString
-                        self.currentTranscript = transcript
-                        self.onTranscriptionUpdate?(transcript)
-                        
-                        if result.isFinal {
-                            self.logger.info("Final transcript: \(transcript)")
-                            self.stop()
-                        }
-                    }
-                }
-            }
-            
+
+            startRecognitionTask(with: request)
+
             logger.info("Speech recognition started")
-            
+
         } catch {
             logger.error("Failed to start recording: \(error.localizedDescription)")
             updateState(.error(error))
@@ -188,16 +167,51 @@ class SpeechRecognizer: NSObject {
     func stop() {
         task?.cancel()
         task = nil
-        
+
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine = nil
-        
+
         request?.endAudio()
         request = nil
-        
+
         updateState(.idle)
         logger.info("Speech recognition stopped")
+    }
+
+    /// Restart recognition without tearing down the audio engine.
+    /// Used to keep listening across `isFinal` finalizations so the player
+    /// can keep speaking within a single answer window.
+    func restart() {
+        guard let recognizer, recognizer.isAvailable else {
+            logger.warning("Cannot restart: recognizer unavailable")
+            stop()
+            return
+        }
+        guard let audioEngine, audioEngine.isRunning else {
+            logger.warning("Cannot restart: audio engine not running")
+            stop()
+            return
+        }
+
+        task?.cancel()
+        task = nil
+        request?.endAudio()
+
+        currentTranscript = ""
+
+        let inputNode = audioEngine.inputNode
+        inputNode.removeTap(onBus: 0)
+
+        let newRequest = makeRequest()
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+            newRequest.append(buffer)
+        }
+        self.request = newRequest
+
+        startRecognitionTask(with: newRequest)
+        logger.info("Speech recognition restarted")
     }
     
     /// Pause recognition temporarily
@@ -220,32 +234,62 @@ class SpeechRecognizer: NSObject {
     
     private func prepareEngine() async throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
         let audioEngine = AVAudioEngine()
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        
-        // Configure request for game use case
-        request.shouldReportPartialResults = true
-        request.taskHint = .confirmation  // Better for single words
-        request.requiresOnDeviceRecognition = false  // Allow cloud if needed
-        
+        let request = makeRequest()
+
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
         try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-        
+
         // Setup audio tap
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
-        
+
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             request.append(buffer)
         }
-        
+
         audioEngine.prepare()
         try audioEngine.start()
-        
+
         return (audioEngine, request)
     }
-    
+
+    private func makeRequest() -> SFSpeechAudioBufferRecognitionRequest {
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.taskHint = taskHint // One of: unspecified, dictation, search, confirmation
+        request.requiresOnDeviceRecognition = false
+        return request
+    }
+
+    private func startRecognitionTask(with request: SFSpeechAudioBufferRecognitionRequest) {
+        guard let recognizer else { return }
+        self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                if let error {
+                    self.logger.error("Recognition error: \(error.localizedDescription)")
+                    self.updateState(.error(error))
+                    self.stop()
+                    return
+                }
+
+                if let result {
+                    let transcript = result.bestTranscription.formattedString
+                    self.currentTranscript = transcript
+                    self.onTranscriptionUpdate?(transcript)
+
+                    if result.isFinal {
+                        self.logger.info("Final transcript: \(transcript) — restarting")
+                        self.stop()
+                    }
+                }
+            }
+        }
+    }
+
     private func updateState(_ newState: RecognitionState) {
         currentState = newState
         onStateChange?(newState)

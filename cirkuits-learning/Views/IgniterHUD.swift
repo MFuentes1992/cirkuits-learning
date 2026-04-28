@@ -11,6 +11,7 @@ import SwiftUI
 class IgniterHUD {
     private var timerLabel: UILabel
     private var scoreLabel: UILabel
+    private var feedbackLabel: UILabel
     private var pauseButton: UIButton
     private var microphoneButton: UIButton
     private var parentView: UIView
@@ -26,6 +27,7 @@ class IgniterHUD {
         self.parentView = parentView
         self.timerLabel = UILabel()
         self.scoreLabel = UILabel()
+        self.feedbackLabel = UILabel()
         self.microphoneButton = UIButton(type: .system)
         self.pauseButton = UIButton(type: .system)
         self.levelRemainingTime = gameState.LevelDuration
@@ -52,7 +54,18 @@ class IgniterHUD {
         scoreLabel.translatesAutoresizingMaskIntoConstraints = false
         scoreLabel.text = "000"
         parentView.addSubview(scoreLabel)
-       
+
+        // Correct-answer feedback label
+        feedbackLabel.font = .systemFont(ofSize: 48, weight: .heavy)
+        feedbackLabel.textColor = .systemGreen
+        feedbackLabel.shadowColor = lookAndFeel.foreColor
+        feedbackLabel.shadowOffset = CGSize(width: 2, height: 2)
+        feedbackLabel.text = "✅ Good!"
+        feedbackLabel.textAlignment = .center
+        feedbackLabel.alpha = 0
+        feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(feedbackLabel)
+
         // Pause Button
         let pauseConfiguration = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
         pauseButton.setImage(UIImage(systemName: "pause.circle.fill", withConfiguration: pauseConfiguration), for: .normal)
@@ -81,7 +94,10 @@ class IgniterHUD {
             
             scoreLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 20),
             scoreLabel.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
-            
+
+            feedbackLabel.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+            feedbackLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 100),
+
             pauseButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
             pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
             
@@ -155,5 +171,23 @@ class IgniterHUD {
     func updateHudScore(score: Int) {
         let formattedString = String(format: "%03d", gameState.Score)
         scoreLabel.text = formattedString
+    }
+
+    func showCorrectFeedback() {
+        feedbackLabel.layer.removeAllAnimations()
+        feedbackLabel.alpha = 0
+        feedbackLabel.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
+        UIView.animate(withDuration: 0.18, delay: 0, options: .curveEaseOut, animations: {
+            self.feedbackLabel.alpha = 1
+            self.feedbackLabel.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
+        }, completion: { _ in
+            UIView.animate(withDuration: 0.12, animations: {
+                self.feedbackLabel.transform = .identity
+            }, completion: { _ in
+                UIView.animate(withDuration: 0.4, delay: 0.45, options: .curveEaseIn, animations: {
+                    self.feedbackLabel.alpha = 0
+                })
+            })
+        })
     }
 }
