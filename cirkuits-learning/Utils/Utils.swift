@@ -7,6 +7,11 @@
 
 import MetalKit
 
+enum stringUtils: String {
+    case whiteSpace = " "
+    case backSlash = "/"
+}
+
 func makeDefaultRenderPipeline(device: MTLDevice, vertexName: String, fragmentName: String) -> MTLRenderPipelineState {
     let pipelineState: MTLRenderPipelineState!
     let library = device.makeDefaultLibrary()!
@@ -76,4 +81,17 @@ func makeObjectRenderPipeline(device: MTLDevice, vertexName: String, fragmentNam
 func sanitizeText(text: String) -> String {
     let sanitized = text.replacing(/[\ .,]/, with: "")
     return sanitized.lowercased()
+}
+
+func igniterStageMapping(stage: String) -> Int? {
+    let wordsPerStage = ["0": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 7, "7": 8]
+    return wordsPerStage[stage]
+}
+
+func createSentence(bank:[String]) -> String {
+    var sentence = ""
+    for word in bank {
+        sentence = sentence + word + " "
+    }
+    return sentence.trimmingCharacters(in: .whitespaces)
 }

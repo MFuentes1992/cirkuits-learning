@@ -28,9 +28,6 @@ class IgniterScene: SceneProtocol {
     private var WordFoos = [WordFoo]()
     private var spRecTaskHint: SFSpeechRecognitionTaskHint
     private var speechRecognition: SpeechRecognizer
-    
-    var answer = ""
-
     // -- Telemetry
     let logger = Logger(subsystem: "com.cirkuits.igniter", category: "GameLoop")
     
@@ -42,21 +39,21 @@ class IgniterScene: SceneProtocol {
     var lastPanLocation: CGPoint = .zero
     
     let wordBank: [String] = [
-        "I am",
-        "You are",
-        "He is",
-        "She is",
-        "It is",
-        "We are",
-        "They are",
-        "We won",
-        "I see you",
-        "She is happy",
-        "He is sad",
-        "I am tired",
-        "You are kind",
-        "We are friends",
-        "They are here"
+        "I", "am",
+        "You", "are",
+        "He", "is",
+        "She", "is",
+        "It", "is",
+        "We", "are",
+        "They", "are",
+        "We", "won",
+        "I", "see",
+        "She", "is",
+        "He", "is",
+        "I", "am",
+        "You", "kind",
+        "We", "are",
+        "They", "are"
     ]
 
     private var gameOverTriggered = false
@@ -74,22 +71,19 @@ class IgniterScene: SceneProtocol {
         self.gameElapsedTime = 0
         self.wordStartSec = 0
         self.streakChain = 0
-        // self.spRecTaskHint = wordBank[0].contains(" ") ? .search : .confirmation
         self.spRecTaskHint = .confirmation
         self.speechRecognition = SpeechRecognizer(taskHint: spRecTaskHint)
+        
         hud = IgniterHUD(parentView: view, gameState: gameState, speechRecognizer: speechRecognition)
         buildInitialScene(view: view)
         setupSpeechRecognition()
-        
-        gameState.Timer.StartTime = Date().timeIntervalSince1970
-        gameElapsedTime = gameState.Timer.getElapsedTime()
     }
     
     private func setupSpeechRecognition() {
         // Configure callbacks
         speechRecognition.onTranscriptionUpdate = { [weak self] transcript in
             guard let self = self else { return }
-            self.gameState.appendSpeechResult(transcript:sanitizeText(text:transcript))
+            self.gameState.CapturedAnswer = transcript
             self.gameState.PlayerState = .Speaking
         }
         
@@ -97,6 +91,7 @@ class IgniterScene: SceneProtocol {
             guard let self = self else { return }
             switch state {
             case .idle:
+                self.gameState.AnswersBucket = []
                 self.gameState.PlayerState = .Idle
             case .recording:
                 self.logger.info("Speech recognition started")
@@ -128,12 +123,12 @@ class IgniterScene: SceneProtocol {
             aspectRatio: 19.5/9,
             nearZ: 1.0,
             farZ: 1000.0)
-        
-        for word in wordBank {
-            WordFoos.append(WordFoo(Word: word, Reward: 1))
+        let wordsPerStage = igniterStageMapping(stage: String(gameState.Stage)) ?? 1
+        for i in stride(from: 0, to: wordBank.count - 1, by: wordsPerStage) {
+            let slice = wordBank[i...(i+(wordsPerStage - 1))]
+            let sentence = createSentence(bank: slice.map({ String($0) }))
+            WordFoos.append(WordFoo(Word: sentence, Reward: Int.random(in: 1...9)))
         }
-        
-        
         camera = Camera(settings: cameraSettings)
         wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
@@ -158,6 +153,7 @@ class IgniterScene: SceneProtocol {
         score += Double(reward)
         currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
+        gameState.AnswersBucket = []
     }
     
     func resetTimers() {
@@ -167,9 +163,16 @@ class IgniterScene: SceneProtocol {
     
     // -- Encode is called by update.
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
+        if gameState.CurrentState == .initializing {
+            gameState.Timer.StartTime = Date().timeIntervalSince1970
+            gameElapsedTime = gameState.Timer.getElapsedTime()
+            gameState.CurrentState = .running
+        }
+        
         if gameState.CurrentState == .running {
             logger.info("Player state: \(self.gameState.PlayerState == .Speaking ? "Speaking" : "Idle") ")
             logger.info("Game elapsed time: \(self.gameElapsedTime)")
+            logger.info("Objective word: \(self.WordFoos[self.currentFooIndex].Word)")
             switch gameState.PlayerState {
             case .Speaking:
                 timeToAnswer = gameState.Timer.getElapsedTime() - wordStartSec
@@ -178,21 +181,28 @@ class IgniterScene: SceneProtocol {
                     timeToAnswer = 0
                     nextFoo(reward: 0)
                     streakChain = 0
+                    hud.incrementCombo(streakChain)
                     gameState.PlayerState = .Idle
                     wordStartSec = gameState.Timer.getElapsedTime()
                 }
-                let isCorrect = sanitizeText(text: WordFoos[currentFooIndex].Word) == sanitizeText(text: answer)
+                
+                // --- Evaluate if correct answer
+                let goal = sanitizeText(text: WordFoos[currentFooIndex].Word)
+                let rawSentence = createSentence(bank: gameState.AnswersBucket)
+                let answer = sanitizeText(text: rawSentence)
+                logger.info("Comparisson -> goal: \(goal) - answer: \(answer)")
+                let isCorrect = answer == goal
+                logger.info("Is correct: \(isCorrect)")
+                
                 if isCorrect {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
                     streakChain += 1
+                    hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
                     hud.showCorrectFeedback()
                 }
-                logger.info("Is correct: \(isCorrect)")
-                logger.info("Time to answer: \(self.timeToAnswer)")
-                logger.info("Captured Answer: \(self.gameState.CapturedAnswer)")
             case .Idle:
                 let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
                 gameElapsedTime = gameState.Timer.getElapsedTime()
@@ -200,6 +210,7 @@ class IgniterScene: SceneProtocol {
                     nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
+                    hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
                 }
             }
@@ -209,9 +220,15 @@ class IgniterScene: SceneProtocol {
             }
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
-            if streakChain == gameState.MaxStreak + 1 {
-                score *= 1.5
+            if streakChain == gameState.MaxStreak  {
+                if gameState.Combo == 3 {
+                    score *= 2.2
+                    gameState.Combo = 0
+                } else {
+                    score *= 1.5
+                }
                 streakChain = 0
+                gameState.Combo = gameState.Combo + 1
             }
             
             gameState.Score = Int(score)

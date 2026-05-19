@@ -26,13 +26,16 @@ class SceneManager: SceneProtocol {
         let tmp: SceneProtocol
         switch scene {
         case .CountDown:
+            gameState.CurrentState = .initializing
             tmp = CountDownScene(parentView: view, gameState: gameState, requestScene: {
                 (scene: GameScenes) -> Void in
                 self.view.subviews.forEach { $0.removeFromSuperview() }
-                self.gameState.CurrentState = .running
                 self.setCurrentScene(scene: scene)
             }, nextScene: .Igniter)
         case .Igniter:
+            if gameState.CurrentState == .running {
+                return
+            }
             tmp = IgniterScene(device: self.device, view: self.view,
                                gameState: self.gameState, currentFooIndex: 0,
                                requestScene: { [weak self] scene in
@@ -50,12 +53,13 @@ class SceneManager: SceneProtocol {
                                 })
         }
         currentScene = tmp
-        let levelConfig = LevelConfig(timeToLive: 2.0, timeToAnswer: 2.0, levelDuration: 26, lives: 3, levelCountDown: 3)
+        let levelConfig = LevelConfig(timeToLive: 2.5, timeToAnswer: 2.5, levelDuration: 30, lives: 3, levelCountDown: 3, stage: 1)
         self.gameState.WordTimeToLive = levelConfig.timeToLive
         self.gameState.WordTimeToAnswer = levelConfig.timeToAnswer
         self.gameState.LevelDuration = levelConfig.levelDuration
         self.gameState.Lives = levelConfig.lives
         self.gameState.CountDown = Double(levelConfig.levelCountDown)
+        self.gameState.Stage = levelConfig.stage
         self.gameState.ConfigLoaded = true
     }
     

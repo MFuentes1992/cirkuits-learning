@@ -18,19 +18,31 @@ class GameState {
     private var currentState: PlayState
     private var playerState: PlayerState
     private var countDown: TimeInterval!
-    private var capturedAnswer: [String] = []
+    private var capturedAnswer: String = ""
+    private var answersBucket: [String] = []
     private var isAnswering: Bool = false
     private var correctanswer: Bool = false
     private var nextWordFoo: Bool = false
     private var wordTimeToLive: TimeInterval!
     private var wordTimeToAnswer: TimeInterval!
+    private var stage: Int!
     private var maxStreak: Int = 0
     private var streak: Int = 0
     
     
-    var CapturedAnswer: [String] {
+    var CapturedAnswer: String {
         get { capturedAnswer }
+        set {
+            capturedAnswer = newValue.components(separatedBy: .whitespaces).last ?? ""
+            addResultToBucket(word: capturedAnswer)
+        }
     }
+    
+    var AnswersBucket: [String] {
+        get { answersBucket }
+        set { answersBucket = newValue }
+    }
+    
     var LevelDuration: TimeInterval {
         get { levelDuration }
         set { levelDuration =  newValue }
@@ -99,6 +111,11 @@ class GameState {
         set { playerState = newValue }
     }
     
+    var Stage: Int {
+        get { stage }
+        set { stage = newValue }
+    }
+    
     init(gameState: PlayState, timer: TimeController) {
         self.currentState = gameState
         self.playerState = .Idle
@@ -114,7 +131,7 @@ class GameState {
         score = 0
         combo = 0
         streak = 0
-        capturedAnswer = []
+        capturedAnswer = ""
         isAnswering = false
         correctanswer = false
         nextWordFoo = false
@@ -122,8 +139,7 @@ class GameState {
         configLoaded = false
     }
     
-    
-    func appendSpeechResult(transcript: String) {
-        capturedAnswer.append(transcript)
+    func addResultToBucket(word: String) {
+        answersBucket.append(word)
     }
 }

@@ -13,6 +13,7 @@ class CountDownScene: SceneProtocol {
     private var timer: TimeController
     private var nextScene: GameScenes
     private var requestScene: (GameScenes) -> Void
+    private var gameState: GameState!
     
     init(parentView: UIView, gameState: GameState, requestScene: @escaping (GameScenes) -> Void, nextScene: GameScenes) {
         let lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
@@ -27,6 +28,7 @@ class CountDownScene: SceneProtocol {
         parentView.addSubview(countDownLabel)
         self.requestScene = requestScene
         self.nextScene = nextScene
+        self.gameState = gameState
         timer = gameState.Timer
         elapsedTime = 3.0
         
@@ -46,6 +48,9 @@ class CountDownScene: SceneProtocol {
     }
     
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
+        if gameState.CurrentState != .initializing {
+            return
+        }
         if elapsedTime <= 0  {
             // request scene change
             requestScene(nextScene)

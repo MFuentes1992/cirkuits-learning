@@ -173,6 +173,11 @@ class IgniterHUD {
         scoreLabel.text = formattedString
     }
 
+    //TODO: Rename this to increment streak
+    func incrementCombo(_ value: Int) {
+        comboGauge.incrementCombo(value: value)
+    }
+    
     func showCorrectFeedback() {
         feedbackLabel.layer.removeAllAnimations()
         feedbackLabel.alpha = 0
