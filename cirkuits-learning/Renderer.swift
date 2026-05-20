@@ -7,12 +7,13 @@ import Foundation
 //  Created by Marco Fuentes Jiménez on 04/06/25.
 //
 
+@MainActor
 class Renderer:NSObject, MTKViewDelegate {
     let device:MTLDevice
     let commandQueue:MTLCommandQueue!
     let sceneManager:SceneManager!
     private var transcription = ""
-    private var hudController:HudController!
+    // private var hudController:HudController!
     private var timer: TimeController
     private var gameState: GameState
     
@@ -22,9 +23,9 @@ class Renderer:NSObject, MTKViewDelegate {
         self.commandQueue = device.makeCommandQueue()!
         timer = TimeController()
         gameState = GameState(gameState: .stop, timer: timer)
-        self.hudController = HudController(parentView: view, gameState: gameState)
+       //  self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
-        sceneManager.setCurrentScene(sceneName: "Igniter")
+        sceneManager.setCurrentScene(scene: .CountDown)
         super.init()
     }
     
@@ -57,7 +58,7 @@ class Renderer:NSObject, MTKViewDelegate {
             timer.stop()
         } */
                 
-        hudController.updateHud()
+        // hudController.updateHud()
         
     }
     

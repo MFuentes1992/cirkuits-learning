@@ -107,4 +107,6 @@ class TextureScene: SceneProtocol {
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
         
     }
+    
+    func play() {}
 }

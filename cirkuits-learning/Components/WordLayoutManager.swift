@@ -61,9 +61,9 @@ class WordLayoutManager {
         
     private func createLinearTransform(initialPositionX: Float, initialPositionY: Float = 0.0) {
         let totalWidth = calculateLinearWidth()
-        var currentX: Float = initialPositionX - totalWidth/2
+        var currentX: Float = initialPositionX - totalWidth / 2
         
-        if(totalWidth >= config.maxLinearWidth) {
+        if totalWidth >= config.maxLinearWidth {
             currentX = -totalWidth
             shouldAnimateLayout = true
         } else {
@@ -72,17 +72,17 @@ class WordLayoutManager {
         
         layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
         for letter in letters {
-            if(letter.mesh == nil) {
+            if letter.mesh == nil {
                 currentX += config.blankSpaceWidth
                 continue
             }
-            // Create transform matrix
             var transform = matrix_identity_float4x4
-            transform.columns.3.x = currentX
+            // Offset by -bbLeftX so the letter's visual left edge aligns with currentX
+            transform.columns.3.x = currentX - letter.bbLeftX
             transform.columns.3.y = initialPositionY
             
             letter.transform = transform
-            currentX += config.letterWidth + config.letterSpacing
+            currentX += letter.width + config.letterSpacing
         }
     }
     

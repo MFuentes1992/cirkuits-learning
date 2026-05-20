@@ -8,6 +8,10 @@ import Foundation
 class TimeController {
     private var tick: Double = 0
     private var startTime: Double = 0 // -- Start time in seconds
+    var StartTime: Double {
+        get { return startTime }
+        set { startTime = newValue }
+    }
     private var currentTime: Double
     private var isStopped: Bool
     
@@ -40,10 +44,14 @@ class TimeController {
         return Int(tick)
     }
     
+    func getTimeMilliseconds() -> Double {
+        return (Date().timeIntervalSince1970 - startTime) * 1000
+    }
+    
     func getElapsedTime() -> Double {
         return Date().timeIntervalSince1970 - startTime
     }
-    
+   
     func isComplete() -> Bool {
         return isStopped
     }

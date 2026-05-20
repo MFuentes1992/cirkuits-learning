@@ -15,4 +15,5 @@ struct LevelConfig {
     var levelDuration: Double
     var lives: Int
     var levelCountDown: Int
+    var stage: Int = 0
 }
