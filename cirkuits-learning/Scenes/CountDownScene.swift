@@ -47,12 +47,19 @@ class CountDownScene: SceneProtocol {
         }
     }
     
+    func play() {
+        gameState.CurrentState = .initializing
+        timer.start()
+        elapsedTime = 3.0
+    }
+    
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {
         if gameState.CurrentState != .initializing {
             return
         }
         if elapsedTime <= 0  {
             // request scene change
+            timer.stop()
             requestScene(nextScene)
         } else {
             let formattedScoreString = String(format: "%0.0f", elapsedTime)

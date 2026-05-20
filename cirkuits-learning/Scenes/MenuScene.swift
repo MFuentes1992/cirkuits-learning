@@ -17,4 +17,6 @@ class MenuScene: SceneProtocol {
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
         
     }
+    
+    func play() {}
 }

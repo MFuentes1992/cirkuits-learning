@@ -120,5 +120,6 @@ class GameOverScene: SceneProtocol {
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {}
     func handlePinchGesture(gesture: UIPinchGestureRecognizer) {}
     func encode(encoder: any MTLRenderCommandEncoder, view: MTKView) {}
+    func play() {}
 }
 

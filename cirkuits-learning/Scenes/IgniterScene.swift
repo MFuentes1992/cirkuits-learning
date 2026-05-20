@@ -134,6 +134,8 @@ class IgniterScene: SceneProtocol {
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
     }
     
+    func play() {}
+    
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
         if gesture.state == .began {
             lastPanLocation = location

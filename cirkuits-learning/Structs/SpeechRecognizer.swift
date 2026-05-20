@@ -238,8 +238,11 @@ class SpeechRecognizer: NSObject {
 
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
+        try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+
+        selectPreferredInput(audioSession)
+        logCurrentInput(audioSession)
 
         // Setup audio tap
         let inputNode = audioEngine.inputNode
@@ -253,6 +256,39 @@ class SpeechRecognizer: NSObject {
         try audioEngine.start()
 
         return (audioEngine, request)
+    }
+
+    private func selectPreferredInput(_ audioSession: AVAudioSession) {
+        guard let inputs = audioSession.availableInputs else {
+            logger.info("No available inputs reported")
+            return
+        }
+        if let external = inputs.first(where: { $0.portType != .builtInMic }) {
+            do {
+                try audioSession.setPreferredInput(external)
+                logger.info("Preferred input set to external: \(external.portName) [\(external.portType.rawValue)]")
+            } catch {
+                logger.warning("Failed to set preferred input \(external.portName): \(error.localizedDescription)")
+            }
+        } else {
+            logger.info("No external input available; using built-in")
+        }
+    }
+
+    private func logCurrentInput(_ audioSession: AVAudioSession) {
+        let inputs = audioSession.currentRoute.inputs
+        guard let input = inputs.first else {
+            logger.info("Audio input: <none reported by AVAudioSession>")
+            return
+        }
+        logger.info("Audio input: \(input.portName) [\(input.portType.rawValue)] uid=\(input.uid)")
+        if let ds = input.selectedDataSource {
+            logger.info("Data source: \(ds.dataSourceName) orientation=\(String(describing: ds.orientation))")
+        }
+        if inputs.count > 1 {
+            let extras = inputs.dropFirst().map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", ")
+            logger.info("Additional route inputs: \(extras)")
+        }
     }
 
     private func makeRequest() -> SFSpeechAudioBufferRecognitionRequest {

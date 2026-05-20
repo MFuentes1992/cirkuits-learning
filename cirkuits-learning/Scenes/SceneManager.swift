@@ -8,7 +8,7 @@ import MetalKit
 
 
 @MainActor
-class SceneManager: SceneProtocol {
+class SceneManager {
     var device: MTLDevice!
     var view: MTKView!
     var currentScene: SceneProtocol!
@@ -26,7 +26,6 @@ class SceneManager: SceneProtocol {
         let tmp: SceneProtocol
         switch scene {
         case .CountDown:
-            gameState.CurrentState = .initializing
             tmp = CountDownScene(parentView: view, gameState: gameState, requestScene: {
                 (scene: GameScenes) -> Void in
                 self.view.subviews.forEach { $0.removeFromSuperview() }
@@ -61,6 +60,7 @@ class SceneManager: SceneProtocol {
         self.gameState.CountDown = Double(levelConfig.levelCountDown)
         self.gameState.Stage = levelConfig.stage
         self.gameState.ConfigLoaded = true
+        currentScene.play()
     }
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {

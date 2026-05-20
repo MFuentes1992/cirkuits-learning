@@ -22,7 +22,6 @@ class Renderer:NSObject, MTKViewDelegate {
         self.device = device
         self.commandQueue = device.makeCommandQueue()!
         timer = TimeController()
-        timer.start()
         gameState = GameState(gameState: .stop, timer: timer)
        //  self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
