@@ -16,6 +16,19 @@ enum MicrophoneState {
     case unmuted
 }
 
+enum AudioInputType {
+    case builtIn
+    case external
+
+    /// SF Symbol name representing this input type.
+    var iconName: String {
+        switch self {
+        case .builtIn: return "mic.fill"
+        case .external: return "airpods"
+        }
+    }
+}
+
 enum GameScenes {
     case CountDown
     case Igniter

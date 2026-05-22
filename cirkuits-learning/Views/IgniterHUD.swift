@@ -16,6 +16,7 @@ class IgniterHUD {
     private var feedbackLabel: UILabel
     private var pauseButton: UIButton
     private var microphoneButton: UIButton
+    private var audioInputIndicator: UIImageView
     private var parentView: UIView
     private var microphoneState: MicrophoneState
     private weak var speechRecognition: SpeechRecognizer?
@@ -32,12 +33,49 @@ class IgniterHUD {
         self.feedbackLabel = UILabel()
         self.microphoneButton = UIButton(type: .system)
         self.pauseButton = UIButton(type: .system)
+        self.audioInputIndicator = UIImageView()
         self.levelRemainingTime = gameState.LevelDuration
         self.comboGauge = ComboGauge(frame: CGRect(x: 0, y:0, width: 100, height: 100), maxCombo: MaxStreak)
         lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         self.speechRecognition = speechRecognizer
         microphoneState = .unmuted
         setUpHUD()
+        setUpAudioInputIndicator()
+    }
+
+    /// Reflects the current audio input device in the HUD and keeps the
+    /// indicator in sync when the input switches (e.g. built-in mic ↔ Bluetooth headset).
+    private func setUpAudioInputIndicator() {
+        Task { @MainActor in
+            guard let speechRecognition = speechRecognition else {
+                updateAudioInputIndicator(.builtIn, animated: false)
+                return
+            }
+            updateAudioInputIndicator(speechRecognition.currentInputType, animated: false)
+            speechRecognition.onAudioInputChange = { [weak self] inputType in
+                self?.updateAudioInputIndicator(inputType, animated: true)
+            }
+        }
+    }
+
+    /// Updates the audio input icon, pulsing it when the change is user-visible.
+    private func updateAudioInputIndicator(_ inputType: AudioInputType, animated: Bool) {
+        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
+        audioInputIndicator.image = UIImage(systemName: inputType.iconName, withConfiguration: config)
+        audioInputIndicator.tintColor = inputType == .external ? .systemBlue : lookAndFeel.color
+
+        guard animated else { return }
+        audioInputIndicator.layer.removeAllAnimations()
+        audioInputIndicator.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
+        UIView.animate(
+            withDuration: 0.35,
+            delay: 0,
+            usingSpringWithDamping: 0.5,
+            initialSpringVelocity: 0.6,
+            options: .curveEaseOut,
+            animations: {
+                self.audioInputIndicator.transform = .identity
+            })
     }
     
     func setUpHUD() {
@@ -84,6 +122,12 @@ class IgniterHUD {
         microphoneButton.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(microphoneButton)
 
+        // Audio input indicator (built-in mic ↔ Bluetooth headset)
+        audioInputIndicator.contentMode = .scaleAspectFit
+        audioInputIndicator.tintColor = lookAndFeel.color
+        audioInputIndicator.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(audioInputIndicator)
+
         //combo Gauge
         comboGauge.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(comboGauge)
@@ -106,6 +150,11 @@ class IgniterHUD {
             microphoneButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
             microphoneButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
             
+            audioInputIndicator.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
+            audioInputIndicator.topAnchor.constraint(equalTo: scoreLabel.bottomAnchor, constant: 12),
+            audioInputIndicator.widthAnchor.constraint(equalToConstant: 30),
+            audioInputIndicator.heightAnchor.constraint(equalToConstant: 30),
+
             comboGauge.widthAnchor.constraint(equalToConstant: 120),
             comboGauge.heightAnchor.constraint(equalToConstant: 140),
             comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 5),

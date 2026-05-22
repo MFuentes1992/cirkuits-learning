@@ -74,22 +74,52 @@ class SpeechRecognizer: NSObject {
     
     /// Callback invoked when recognition state changes
     var onStateChange: ((RecognitionState) -> Void)?
-    
+
+    /// Callback invoked when the active audio input device changes
+    /// (e.g. built-in mic ↔ Bluetooth headset)
+    var onAudioInputChange: ((AudioInputType) -> Void)?
+
+    /// Observer token for audio route change notifications.
+    private var routeObserver: NSObjectProtocol?
+
+    /// The type of audio input currently feeding the recognizer.
+    var currentInputType: AudioInputType {
+        let portType = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portType
+        if let portType, portType != .builtInMic {
+            return .external
+        }
+        return .builtIn
+    }
+
     // MARK: - Initialization
-    
+
     init(taskHint: SFSpeechRecognitionTaskHint, locale: Locale = .current) {
         self.recognizer = SFSpeechRecognizer(locale: locale)
         self.taskHint = taskHint
         super.init()
-        
+
         // Monitor recognizer availability
         self.recognizer?.delegate = self
+
+        // Monitor audio route changes (built-in mic ↔ Bluetooth headset, etc.)
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.notifyAudioInputChange()
+            }
+        }
     }
-    
+
     deinit {
         // Cleanup needs to happen synchronously in deinit
         // We can't call @MainActor methods, so we do basic cleanup directly
         // The task, audioEngine, and request will be deallocated automatically
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
+        }
     }
     
     // MARK: - Authorization
@@ -255,7 +285,16 @@ class SpeechRecognizer: NSObject {
         audioEngine.prepare()
         try audioEngine.start()
 
+        notifyAudioInputChange()
+
         return (audioEngine, request)
+    }
+
+    /// Reports the current audio input type to observers.
+    private func notifyAudioInputChange() {
+        let inputType = currentInputType
+        logger.info("Active audio input type: \(String(describing: inputType))")
+        onAudioInputChange?(inputType)
     }
 
     private func selectPreferredInput(_ audioSession: AVAudioSession) {
