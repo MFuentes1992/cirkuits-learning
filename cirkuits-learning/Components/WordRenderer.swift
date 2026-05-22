@@ -42,6 +42,10 @@ class WordRenderer {
     func update(deltaTime: Float) {
         layoutManager.update(deltaTime: deltaTime)
     }
+   
+    func cleanUp() {
+        layoutManager.cleanStageLetters()
+    }
     
     func render(encoder: MTLRenderCommandEncoder,
                 viewMatrix: simd_float4x4,

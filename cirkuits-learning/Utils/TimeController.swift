@@ -14,20 +14,40 @@ class TimeController {
     }
     private var currentTime: Double
     private var isStopped: Bool
-    
+    private var isPaused: Bool = false
+    private var pauseStart: Double = 0   // -- Wall time when the current pause began
+    private var pausedAccum: Double = 0  // -- Total time spent paused, excluded from elapsed
+
     init() {
         self.isStopped = true
         self.currentTime = 0
     }
-        
+
     func start() {
         startTime = Date().timeIntervalSince1970
         currentTime = startTime
         isStopped = false
+        isPaused = false
+        pauseStart = 0
+        pausedAccum = 0
     }
-    
+
     func stop() {
-        isStopped = true        
+        isStopped = true
+    }
+
+    /// Freezes elapsed time without stopping the timer.
+    func pause() {
+        guard !isPaused else { return }
+        isPaused = true
+        pauseStart = Date().timeIntervalSince1970
+    }
+
+    /// Resumes from a pause, discounting the paused interval from elapsed time.
+    func resume() {
+        guard isPaused else { return }
+        isPaused = false
+        pausedAccum += Date().timeIntervalSince1970 - pauseStart
     }
     
     func update() {
@@ -45,11 +65,13 @@ class TimeController {
     }
     
     func getTimeMilliseconds() -> Double {
-        return (Date().timeIntervalSince1970 - startTime) * 1000
+        return getElapsedTime() * 1000
     }
-    
+
     func getElapsedTime() -> Double {
-        return Date().timeIntervalSince1970 - startTime
+        // -- While paused, freeze at the moment the pause started.
+        let now = isPaused ? pauseStart : Date().timeIntervalSince1970
+        return now - startTime - pausedAccum
     }
    
     func isComplete() -> Bool {
