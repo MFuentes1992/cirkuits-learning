@@ -8,6 +8,7 @@ import simd
 import MetalKit
 
 class Letter {
+    var id: Character
     var mesh: Mesh!
     var margin: Float = 0
     var bbLeftX: Float = 0
@@ -16,8 +17,9 @@ class Letter {
     var uniformBuffer: MTLBuffer!
     var transform: simd_float4x4 = matrix_identity_float4x4
 
-    init(letter: String, device: MTLDevice) {
-        if(letter == " ") { return }
+    init(letter: Character, device: MTLDevice) {
+        self.id = letter
+        if !id.isLetter { return }
         guard let letterAsset = NSDataAsset(name: "\(letter.lowercased())_letter") else {
             fatalError("No se pudo encontrar letter en el assets bunddle. \(letter)")
         }
@@ -30,6 +32,17 @@ class Letter {
         bbRightX = result.2
     }
     
+    /// Creates a lightweight occurrence that shares the template's mesh
+    /// (the expensive GPU buffers) but owns its own transform.
+    init(copying template: Letter) {
+        self.id = template.id
+        self.mesh = template.mesh
+        self.margin = template.margin
+        self.bbLeftX = template.bbLeftX
+        self.bbRightX = template.bbRightX
+        self.uniformBuffer = template.uniformBuffer
+    }
+
     func getModel() -> Mesh {
         return mesh;
     }

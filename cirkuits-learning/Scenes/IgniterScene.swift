@@ -218,6 +218,10 @@ class IgniterScene: SceneProtocol {
             }
             if  gameElapsedTime >= gameState.LevelDuration {
                 gameState.HighScore = gameState.Score
+                speechRecognition.stop()
+                gameState.Timer.stop()
+                wordRenderer.cleanUp()
+                gameState.CurrentState = .stop
                 requestScene(.GameOver)
             }
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)

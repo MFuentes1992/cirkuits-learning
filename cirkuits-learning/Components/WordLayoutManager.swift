@@ -13,7 +13,8 @@ enum LayoutMode {
 }
 
 class WordLayoutManager {
-    private var letters: [Letter] = []
+    private var letters = [Character: Letter]()
+    private var lettersOnStage: [Letter] = []
     private var config: WordLayoutConfig
     private var device: MTLDevice!
     private var currentLayoutMode: LayoutMode = .linear
@@ -31,20 +32,29 @@ class WordLayoutManager {
     }
     
     func setWord(word: String) throws {
-        self.letters.removeAll()
+        self.lettersOnStage.removeAll()
         for letter in word {
-            let letter = Letter(letter: String(letter), device: self.device)
-            self.letters.append(letter)
+            let key = letter.isLetter ? Character(letter.lowercased()) : Character("_")
+            let template: Letter
+            if let cached = letters[key] {
+                template = cached
+            } else {
+                template = Letter(letter: key, device: self.device)
+                letters[key] = template
+            }
+            // Each on-stage occurrence needs its own transform, but shares
+            // the cached mesh — so repeated letters don't overlap.
+            lettersOnStage.append(Letter(copying: template))
         }
         createLinearTransform(initialPositionX: 0.0, initialPositionY: 20)
     }
     
     func getLetters() -> [Letter] {
-        return letters
+        return lettersOnStage
     }
     
     func getLetterTransforms() -> [simd_float4x4] {
-        return letters.map { $0.transform }
+        return lettersOnStage.map { $0.transform }
     }
     
     func update(deltaTime: Float) {
@@ -52,10 +62,10 @@ class WordLayoutManager {
     }
         
     private func calculateLinearWidth() -> Float {
-        guard !letters.isEmpty else { return 0 }
+        guard !lettersOnStage.isEmpty else { return 0 }
         
-        let totalLetterWidth = letters.reduce(0) { $0 + $1.width }
-        let totalSpacing = Float(letters.count - 1) * config.letterSpacing
+        let totalLetterWidth = lettersOnStage.reduce(0) { $0 + $1.width }
+        let totalSpacing = Float(lettersOnStage.count - 1) * config.letterSpacing
         return totalLetterWidth + totalSpacing
     }
         
@@ -71,7 +81,7 @@ class WordLayoutManager {
         }
         
         layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
-        for letter in letters {
+        for letter in lettersOnStage {
             if letter.mesh == nil {
                 currentX += config.blankSpaceWidth
                 continue
@@ -85,6 +95,11 @@ class WordLayoutManager {
             currentX += letter.width + config.letterSpacing
         }
     }
+   
+    func cleanStageLetters() {
+        lettersOnStage.removeAll()
+        letters.removeAll()
+    }
     
     private func updateLinearTransforms(deltaTime: Float) {
         if(!shouldAnimateLayout) {
@@ -93,10 +108,10 @@ class WordLayoutManager {
         time += deltaTime * config.speed
         acceleration = abs(cos(time))
         animationAmout = (acceleration * slideDirection)
-        for i in 0..<letters.count {
-            var transform = letters[i].transform
+        for i in 0..<lettersOnStage.count {
+            var transform = lettersOnStage[i].transform
             transform.columns.3.x += animationAmout
-            letters[i].transform = transform
+            lettersOnStage[i].transform = transform
         }
         layoutBondingBox.origin.x += CGFloat(animationAmout)
         

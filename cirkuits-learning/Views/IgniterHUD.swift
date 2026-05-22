@@ -7,8 +7,10 @@
 
 import Foundation
 import SwiftUI
+import os
 
 class IgniterHUD {
+    private let logger = Logger(subsystem: "com.cirkuits.igniter", category: "IgniterHUD")
     private var timerLabel: UILabel
     private var scoreLabel: UILabel
     private var feedbackLabel: UILabel
@@ -151,8 +153,20 @@ class IgniterHUD {
         if state == .running {
             state = .pause
             iconName = "play.circle.fill"
+            gameState.Timer.pause()
+            Task { @MainActor in
+                speechRecognition?.pause()
+            }
         } else if state == .pause {
             state = .running
+            gameState.Timer.resume()
+            Task { @MainActor in
+                do {
+                    try speechRecognition?.resume()
+                } catch {
+                    logger.error("Failed to resume speech recognition: \(error.localizedDescription)")
+                }
+            }
         }
         gameState.CurrentState = state
         let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
