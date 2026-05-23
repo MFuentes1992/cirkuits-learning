@@ -130,10 +130,15 @@ struct MenuView: View {
 
     private var flameSection: some View {
         ZStack {
-            soundWave(rightSide: false, color: MenuPalette.yellow, diameter: 230, period: 1.5)
-            soundWave(rightSide: true,  color: MenuPalette.yellow, diameter: 230, period: 1.5)
-            soundWave(rightSide: false, color: MenuPalette.pink,   diameter: 168, period: 1.05)
-            soundWave(rightSide: true,  color: MenuPalette.pink,   diameter: 168, period: 1.05)
+            // Staggered ripples on each side — N ripples per side, evenly
+            // spaced in time, period == N * stagger so the cadence repeats
+            // seamlessly.
+            ripple(rightSide: false, color: MenuPalette.yellow, delay: 0.0)
+            ripple(rightSide: false, color: MenuPalette.pink,   delay: 0.6)
+            //ripple(rightSide: false, color: MenuPalette.yellow, delay: 1.2)
+            ripple(rightSide: true,  color: MenuPalette.yellow, delay: 0.0)
+            ripple(rightSide: true,  color: MenuPalette.pink,   delay: 0.6)
+            //ripple(rightSide: true,  color: MenuPalette.yellow, delay: 1.5)
 
             menuAsset("Igniter_IMG")
                 .resizable()
@@ -145,18 +150,21 @@ struct MenuView: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    /// A single parenthesis-shaped sound wave. Pink/yellow pairs pulse outward
-    /// from the flame like emitted sound.
-    private func soundWave(rightSide: Bool, color: Color, diameter: CGFloat, period: Double) -> some View {
-        Circle()
+    /// A single sound-wave ripple. Starts close to the flame, expands outward,
+    /// and fades to zero opacity — like a water ripple. The fade-to-invisible
+    /// at the end of each cycle hides the snap-back to the starting state.
+    private func ripple(rightSide: Bool, color: Color, delay: Double) -> some View {
+        let period: Double = 1.8
+        return Circle()
             .trim(from: 0.40, to: 0.60)
-            .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
             .rotationEffect(.degrees(rightSide ? 180 : 0))
-            .frame(width: diameter, height: diameter)
-            .scaleEffect(wavePulse ? 0.8 : 0.6)
-            .opacity(wavePulse ? 0.5 : 1.0)
-            .animation(.easeInOut(duration: period).repeatForever(autoreverses: true),
-                       value: wavePulse)
+            .frame(width: 200, height: 200)
+            .scaleEffect(wavePulse ? 1.5 : 0.3)
+            .opacity(wavePulse ? 0.0 : 1.0)
+            .animation(
+                .easeOut(duration: period).delay(delay).repeatForever(autoreverses: false),
+                value: wavePulse)
     }
 
     // MARK: Logo
