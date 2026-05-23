@@ -21,20 +21,22 @@ class ViewController: UIViewController {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal no es compatible con este dispositivo")
         }
-
-        metalView = MTKView(frame: view.bounds, device: device)
+        // The root view is already an MTKView (set in _Main.storyboard), so
+        // render into it directly instead of nesting a second, inset MTKView.
+        guard let metalView = view as? MTKView else {
+            fatalError("El view raíz debe ser un MTKView")
+        }
+        self.metalView = metalView
         metalView.device = device
         metalView.clearColor = MTLClearColorMake(0.423, 0.231, 0.66, 1)
-        view.addSubview(metalView)
 
-        renderer = Renderer(device: metalView.device, view: metalView)
+        renderer = Renderer(device: device, view: metalView)
         metalView.delegate = renderer
         print("App -> loaded!")
         // Gestos
         view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(handlePan)))
         view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(handlePinch)))
     }
-    
 
     @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
         let location = gesture.location(in: view)
