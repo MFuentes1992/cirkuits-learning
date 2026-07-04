@@ -2,182 +2,236 @@
 //  ComboGauge.swift
 //  cirkuits-learning
 //
-//  Created by Marco Fuentes Jiménez on 03/11/25.
+//  Streak funnel meter for the Igniter HUD.
+//  Redrawn to match the target design: a pink-outlined funnel of
+//  trapezoid bars (fills bottom-up, magenta at the top / lime at the
+//  bottom), a red score circle and a white "xNN" multiplier badge.
 //
 import UIKit
 
 class ComboGauge: UIView {
-    private var maxCombo = 4
-    private var combo: Int = 0 {
-        didSet {
-            updateGauge()
-        }
-    }
-    
+
+    // MARK: Config
+    private let barCount = 5                 // design always shows five segments
+    private var maxCombo = 5
+
+    // MARK: Layout constants (points, in local space)
+    private let leftX: CGFloat = 22
+    private let topY: CGFloat = 6
+    private let topWidth: CGFloat = 112
+    private let bottomWidth: CGFloat = 66
+    private let barHeight: CGFloat = 20
+    private let barGap: CGFloat = 7
+    private let skew: CGFloat = 10           // right-edge slant of each bar
+
+    private var combo: Int = 0 { didSet { updateGauge() } }
+    private var score: Int = 0 { didSet { scoreLabel.text = "\(score)" } }
+
+    // MARK: Layers / subviews
     private var barLayers: [CAShapeLayer] = []
     private var barOutlineLayers: [CAShapeLayer] = []
+    private let bracketLayer = CAShapeLayer()
+
+    private let scoreCircle = UIView()
+    private let scoreLabel = UILabel()
+    private let badgeCircle = UIView()
     private let badgeLabel = UILabel()
-    private let comboLabel = UILabel()
-        
+    private let streakLabel = UILabel()
+
+    // MARK: Init
     init(frame: CGRect, maxCombo: Int) {
         self.maxCombo = maxCombo
         super.init(frame: frame)
         setupGauge()
     }
-    
+
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupGauge()
     }
-    
+
     private func setupGauge() {
         backgroundColor = .clear
-        
-        // Create 5 parallelogram bars
-        for i in 0..<maxCombo {
-            // Filled bar layer
-            let barLayer = CAShapeLayer()
-            barLayer.fillColor = UIColor.clear.cgColor
-            barLayer.shadowColor = UIColor(red: 0.78, green: 1.0, blue: 0, alpha: 1).cgColor
-            barLayer.shadowRadius = 8
-            barLayer.shadowOpacity = 0
-            barLayer.shadowOffset = .zero
-            layer.addSublayer(barLayer)
-            barLayers.append(barLayer)
-            
-            // Outline layer
-            let outlineLayer = CAShapeLayer()
-            outlineLayer.strokeColor = UIColor.white.cgColor
-            outlineLayer.lineWidth = 2
-            outlineLayer.fillColor = UIColor.clear.cgColor
-            layer.addSublayer(outlineLayer)
-            barOutlineLayers.append(outlineLayer)
+
+        // Pink funnel bracket (behind the bars)
+        bracketLayer.fillColor = UIColor.clear.cgColor
+        bracketLayer.strokeColor = IgniterPalette.pink.cgColor
+        bracketLayer.lineWidth = 3
+        bracketLayer.lineJoin = .round
+        bracketLayer.lineCap = .round
+        layer.addSublayer(bracketLayer)
+
+        // Funnel bars (fill + outline)
+        for _ in 0..<barCount {
+            let bar = CAShapeLayer()
+            bar.fillColor = UIColor.clear.cgColor
+            layer.addSublayer(bar)
+            barLayers.append(bar)
+
+            let outline = CAShapeLayer()
+            outline.strokeColor = IgniterPalette.pink.cgColor
+            outline.lineWidth = 2
+            outline.lineJoin = .round
+            outline.fillColor = UIColor.clear.cgColor
+            layer.addSublayer(outline)
+            barOutlineLayers.append(outline)
         }
-        
-        // Badge circle with multiplier
-        let badge = UIView()
-        badge.backgroundColor = UIColor(red: 0.96, green: 0.96, blue: 0.86, alpha: 1)
-        badge.layer.cornerRadius = 30
-        badge.layer.shadowColor = UIColor.black.cgColor
-        badge.layer.shadowOffset = CGSize(width: 2, height: 2)
-        badge.layer.shadowRadius = 4
-        badge.layer.shadowOpacity = 0.5
-        addSubview(badge)
-        
-        badgeLabel.font = .systemFont(ofSize: 20, weight: .black)
-        badgeLabel.textColor = UIColor(red: 0.17, green: 0.09, blue: 0.06, alpha: 1)
+
+        // Red score circle
+        scoreCircle.backgroundColor = IgniterPalette.pink
+        addSubview(scoreCircle)
+
+        scoreLabel.font = .systemFont(ofSize: 34, weight: .heavy)
+        scoreLabel.textColor = .white
+        scoreLabel.textAlignment = .center
+        scoreLabel.text = "0"
+        scoreCircle.addSubview(scoreLabel)
+
+        // White multiplier badge
+        badgeCircle.backgroundColor = .white
+        addSubview(badgeCircle)
+
+        badgeLabel.font = .systemFont(ofSize: 20, weight: .heavy)
+        badgeLabel.textColor = IgniterPalette.navyInk
         badgeLabel.textAlignment = .center
         badgeLabel.text = "x00"
-        badge.addSubview(badgeLabel)
-        
-        // "COMBO" text
-        comboLabel.text = "STREAK"
-        comboLabel.font = .systemFont(ofSize: 24, weight: .black)
-        comboLabel.textColor = .white
-        comboLabel.textAlignment = .center
-        comboLabel.layer.shadowColor = UIColor.black.cgColor
-        comboLabel.layer.shadowOffset = CGSize(width: 1, height: 1)
-        comboLabel.layer.shadowRadius = 2
-        comboLabel.layer.shadowOpacity = 0.5
-        addSubview(comboLabel)
-        
-        // Layout
-        badge.translatesAutoresizingMaskIntoConstraints = false
-        badgeLabel.translatesAutoresizingMaskIntoConstraints = false
-        comboLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            badge.widthAnchor.constraint(equalToConstant: 60),
-            badge.heightAnchor.constraint(equalToConstant: 60),
-            badge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
-            badge.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -25),
-            
-            badgeLabel.centerXAnchor.constraint(equalTo: badge.centerXAnchor),
-            badgeLabel.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
-            badgeLabel.widthAnchor.constraint(equalTo: badge.widthAnchor),
-            
-            comboLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            comboLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            comboLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 5)
-        ])
-    }
-    
+        badgeCircle.addSubview(badgeLabel)
 
-    
+        // STREAK label
+        streakLabel.text = "STREAK"
+        streakLabel.font = .systemFont(ofSize: 22, weight: .heavy)
+        streakLabel.textColor = .white
+        streakLabel.textAlignment = .left
+        addSubview(streakLabel)
+
+        updateGauge()
+    }
+
+    // MARK: Geometry
     override func layoutSubviews() {
         super.layoutSubviews()
         updateBarPaths()
+        updateBracketPath()
+        layoutOverlays()
     }
-    
+
+    /// Width of bar `i` (0 = top / widest).
+    private func barWidth(_ i: Int) -> CGFloat {
+        let t = CGFloat(i) / CGFloat(barCount - 1)
+        return topWidth - (topWidth - bottomWidth) * t
+    }
+
+    private func barY(_ i: Int) -> CGFloat {
+        topY + CGFloat(i) * (barHeight + barGap)
+    }
+
+    private var funnelBottomY: CGFloat {
+        barY(barCount - 1) + barHeight
+    }
+
+    private func trapezoidPath(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) -> CGPath {
+        // Parallelogram-style bar with a right-leaning slant, matching the
+        // arrow-like edges in the reference art.
+        let p = UIBezierPath()
+        p.move(to: CGPoint(x: x, y: y))
+        p.addLine(to: CGPoint(x: x + width, y: y))
+        p.addLine(to: CGPoint(x: x + width - skew, y: y + height))
+        p.addLine(to: CGPoint(x: x, y: y + height))
+        p.close()
+        return p.cgPath
+    }
+
     private func updateBarPaths() {
-        let barHeight: CGFloat = 18
-        let barSpacing: CGFloat = 8
-        let barWidth: CGFloat = 100
-        let startY: CGFloat = 0
-        let skew: CGFloat = 8
-        
-        for i in 0..<maxCombo {
-            let y = startY + CGFloat(i) * (barHeight + barSpacing)
-            let path = createParallelogramPath(x: 15, y: y, width: barWidth, height: barHeight)
-            
+        for i in 0..<barCount {
+            let path = trapezoidPath(x: leftX, y: barY(i), width: barWidth(i), height: barHeight)
             barLayers[i].path = path
             barOutlineLayers[i].path = path
         }
     }
-    
-    private func createParallelogramPath(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) -> CGPath {
+
+    private func updateBracketPath() {
+        // L / U-shaped chute hugging the left side and bottom of the funnel.
+        let x = leftX - 8
+        let top = topY - 2
+        let bottom = funnelBottomY + 40         // extends past STREAK label
+        let right = leftX + topWidth * 0.55
+        let r: CGFloat = 10
+
         let path = UIBezierPath()
-        path.move(to: CGPoint(x: x, y: y))
-        path.addLine(to: CGPoint(x: x + width, y: y))
-        path.addLine(to: CGPoint(x: x + width, y: y + height))
-        path.addLine(to: CGPoint(x: x, y: y + height))
-        path.close()
-        return path.cgPath
+        path.move(to: CGPoint(x: x, y: top))
+        path.addLine(to: CGPoint(x: x, y: bottom - r))
+        path.addQuadCurve(to: CGPoint(x: x + r, y: bottom),
+                          controlPoint: CGPoint(x: x, y: bottom))
+        path.addLine(to: CGPoint(x: right - r, y: bottom))
+        path.addQuadCurve(to: CGPoint(x: right, y: bottom - r),
+                          controlPoint: CGPoint(x: right, y: bottom))
+        bracketLayer.path = path.cgPath
     }
-    
+
+    private func layoutOverlays() {
+        // Score circle overlaps the right of the funnel, vertically centred.
+        let scoreD: CGFloat = 78
+        let scoreCX = leftX + topWidth * 0.72
+        let scoreCY = barY(1) + barHeight
+        scoreCircle.frame = CGRect(x: scoreCX, y: scoreCY - scoreD / 2, width: scoreD, height: scoreD)
+        scoreCircle.layer.cornerRadius = scoreD / 2
+        scoreLabel.frame = scoreCircle.bounds
+
+        // Multiplier badge, lower-left of the score circle.
+        let badgeD: CGFloat = 54
+        let badgeCX = leftX + bottomWidth * 0.55
+        let badgeCY = funnelBottomY - barHeight * 0.4
+        badgeCircle.frame = CGRect(x: badgeCX, y: badgeCY - badgeD / 2, width: badgeD, height: badgeD)
+        badgeCircle.layer.cornerRadius = badgeD / 2
+        badgeCircle.layer.shadowColor = UIColor.black.cgColor
+        badgeCircle.layer.shadowOffset = CGSize(width: 1, height: 2)
+        badgeCircle.layer.shadowRadius = 3
+        badgeCircle.layer.shadowOpacity = 0.25
+        badgeLabel.frame = badgeCircle.bounds
+
+        // STREAK under the funnel.
+        streakLabel.frame = CGRect(x: leftX - 4, y: funnelBottomY + 8, width: 140, height: 28)
+    }
+
+    // MARK: State
     private func updateGauge() {
-        // Update bars
-        for i in 0..<maxCombo {
-            let barNumber = maxCombo - i
-            let isFilled = combo >= barNumber
-            
+        for i in 0..<barCount {
+            // Bars fill bottom-up: bottom bar (index barCount-1) fills first.
+            let depthFromBottom = barCount - i          // 1...barCount
+            let isFilled = combo >= depthFromBottom
             if isFilled {
-                barLayers[i].fillColor = UIColor(red: 0.78, green: 1.0, blue: 0, alpha: 1).cgColor
-                barLayers[i].shadowOpacity = 0.6
-                
-                // Animate the newly filled bar
-                if combo == barNumber {
-                    animateBar(barLayers[i])
-                }
+                barLayers[i].fillColor = IgniterPalette.streakBars[i].cgColor
+                if combo == depthFromBottom { pulse(barLayers[i]) }
             } else {
                 barLayers[i].fillColor = UIColor.clear.cgColor
-                barLayers[i].shadowOpacity = 0
             }
         }
-        
-        // Update badge text
         badgeLabel.text = String(format: "x%02d", combo)
     }
-    
-    private func animateBar(_ layer: CAShapeLayer) {
-        let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
-        scaleAnimation.fromValue = 1.0
-        scaleAnimation.toValue = 1.15
-        scaleAnimation.duration = 0.15
-        scaleAnimation.autoreverses = true
-        layer.add(scaleAnimation, forKey: "pulse")
+
+    private func pulse(_ layer: CAShapeLayer) {
+        let a = CABasicAnimation(keyPath: "transform.scale")
+        a.fromValue = 1.0
+        a.toValue = 1.15
+        a.duration = 0.15
+        a.autoreverses = true
+        layer.add(a, forKey: "pulse")
     }
-    
-    // Public method to update combo
+
+    // MARK: Public API
     func setCombo(_ value: Int) {
-        combo = min(max(0, value), maxCombo)
+        combo = min(max(0, value), barCount)
     }
-    
+
     func incrementCombo(value: Int) {
-        combo =  value % (maxCombo + 1)
+        combo = min(max(0, value % (barCount + 1)), barCount)
     }
-    
+
     func resetCombo() {
         combo = 0
+    }
+
+    func updateScore(_ value: Int) {
+        score = value
     }
 }

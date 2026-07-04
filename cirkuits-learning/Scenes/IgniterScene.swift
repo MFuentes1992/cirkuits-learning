@@ -226,6 +226,7 @@ class IgniterScene: SceneProtocol {
             }
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
+            hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
             if streakChain == gameState.MaxStreak  {
                 if gameState.Combo == 3 {
                     score *= 2.2

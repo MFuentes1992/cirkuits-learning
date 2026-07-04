@@ -11,24 +11,31 @@ import SwiftUI
 class ViewController: UIViewController {
     private var metalView: MTKView!
     private var renderer: Renderer!
-        
+    private var backgroundView: SwirlPatternView!
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupMetalView()
     }
-    
+
     func setupMetalView() {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal no es compatible con este dispositivo")
         }
-        // The root view is already an MTKView (set in _Main.storyboard), so
-        // render into it directly instead of nesting a second, inset MTKView.
-        guard let metalView = view as? MTKView else {
-            fatalError("El view raíz debe ser un MTKView")
-        }
-        self.metalView = metalView
+
+        // Patterned background sits behind a transparent Metal view so the
+        // 3D letters render on top of it.
+        backgroundView = SwirlPatternView(style: .navy)
+        backgroundView.frame = view.bounds
+        backgroundView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(backgroundView)
+
+        metalView = MTKView(frame: view.bounds, device: device)
         metalView.device = device
-        metalView.clearColor = MTLClearColorMake(0.423, 0.231, 0.66, 1)
+        metalView.isOpaque = false
+        metalView.backgroundColor = .clear
+        metalView.clearColor = MTLClearColorMake(0, 0, 0, 0)
+        view.addSubview(metalView)
 
         renderer = Renderer(device: device, view: metalView)
         metalView.delegate = renderer

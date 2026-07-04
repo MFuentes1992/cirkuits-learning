@@ -10,78 +10,86 @@ import MetalKit
 struct GameOverView: View {
     let score: Int
     let highScore: Int
+    var maxStreak: Int = 0
     let onRetry: () -> Void
     let onExit: () -> Void
 
     @State private var appeared = false
 
-    private let purple = Color(red: 0.423, green: 0.231, blue: 0.66)
+    private let ink   = Color(uiColor: IgniterPalette.navyInk)
+    private let teal  = Color(uiColor: IgniterPalette.teal)
+    private let retry = Color(uiColor: IgniterPalette.retryMagenta)
+    private let exit  = Color(uiColor: IgniterPalette.exitLime)
 
     var body: some View {
         ZStack {
-            purple.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
+            HexPatternBackground().ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
 
                 Text("TIME'S UP")
-                    .font(.system(size: 48, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.4), radius: 4, x: 2, y: 2)
+                    .font(.system(size: 52, weight: .heavy, design: .rounded))
+                    .foregroundColor(ink)
                     .scaleEffect(appeared ? 1 : 0.6)
                     .opacity(appeared ? 1 : 0)
 
-                Spacer().frame(height: 48)
+                Spacer().frame(height: 28)
 
-                VStack(spacing: 8) {
-                    Text("SCORE")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.6))
-                        .tracking(5)
+                VStack(spacing: 6) {
+                    Text("Score")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundColor(ink)
 
                     Text(String(format: "%03d", score))
-                        .font(.system(size: 72, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+                        .font(.system(size: 108, weight: .heavy, design: .rounded))
+                        .foregroundColor(ink)
 
-                    if highScore > 0 {
-                        Text("BEST  \(String(format: "%03d", highScore))")
-                            .font(.system(size: 16, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.5))
-                    }
+                    Text("MAX STREAK \(maxStreak)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(ink)
+                        .tracking(1)
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 20)
 
+                Spacer().frame(height: 28)
+
+                Text("Best  \(String(format: "%03d", max(highScore, score)))")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundColor(ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(teal)
+                    .cornerRadius(14)
+                    .padding(.horizontal, 40)
+                    .opacity(appeared ? 1 : 0)
+
                 Spacer()
 
-                VStack(spacing: 14) {
+                HStack(spacing: 20) {
                     Button(action: onRetry) {
                         Text("RETRY")
-                            .font(.system(size: 20, weight: .bold, design: .monospaced))
-                            .foregroundColor(purple)
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.white)
-                            .cornerRadius(12)
+                            .padding(.vertical, 18)
+                            .background(retry)
+                            .cornerRadius(14)
                     }
-
                     Button(action: onExit) {
                         Text("EXIT")
-                            .font(.system(size: 20, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                            )
+                            .padding(.vertical, 18)
+                            .background(exit)
+                            .cornerRadius(14)
                     }
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 52)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 60)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 30)
             }
@@ -94,6 +102,51 @@ struct GameOverView: View {
     }
 }
 
+/// Faint pastel hexagon lattice used behind the GameOver content.
+private struct HexPatternBackground: View {
+    private let colors: [Color] = [
+        Color(uiColor: IgniterPalette.hexPastelBlue),
+        Color(uiColor: IgniterPalette.hexPastelPink),
+        Color(uiColor: IgniterPalette.hexPastelPurple)
+    ]
+
+    var body: some View {
+        Canvas { context, size in
+            let r: CGFloat = 46
+            let w = r * 2
+            let h = r * sqrt(3)
+            var row = 0
+            var y = -h
+            while y < size.height + h {
+                let xOffset: CGFloat = (row % 2 == 0) ? 0 : r * 1.5
+                var x = -w
+                var col = 0
+                while x < size.width + w {
+                    let path = hexPath(centerX: x + xOffset, centerY: y, radius: r)
+                    let color = colors[(row + col) % colors.count]
+                    context.stroke(path, with: .color(color), lineWidth: 4)
+                    x += r * 3
+                    col += 1
+                }
+                y += h / 2
+                row += 1
+            }
+        }
+    }
+
+    private func hexPath(centerX: CGFloat, centerY: CGFloat, radius: CGFloat) -> Path {
+        var path = Path()
+        for i in 0..<6 {
+            let angle = CGFloat(i) * .pi / 3
+            let pt = CGPoint(x: centerX + radius * cos(angle),
+                             y: centerY + radius * sin(angle))
+            if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+        }
+        path.closeSubpath()
+        return path
+    }
+}
+
 class GameOverScene: SceneProtocol {
     private var hostingView: UIView?
 
@@ -101,6 +154,7 @@ class GameOverScene: SceneProtocol {
         let view = GameOverView(
             score: gameState.Score,
             highScore: gameState.HighScore,
+            maxStreak: gameState.MaxStreak,
             onRetry: { requestScene(.CountDown) },
             onExit: { exit(0) }
         )
