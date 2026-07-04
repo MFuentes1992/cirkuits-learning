@@ -30,6 +30,7 @@ enum AudioInputType {
 }
 
 enum GameScenes {
+    case Menu
     case CountDown
     case Igniter
     case GameOver

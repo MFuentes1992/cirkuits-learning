@@ -25,6 +25,13 @@ class SceneManager {
     func setCurrentScene(scene: GameScenes) {
         let tmp: SceneProtocol
         switch scene {
+        case .Menu:
+            tmp = MenuScene(parentView: view, gameState: gameState,
+                            requestScene: { [weak self] scene in
+                                guard let self else { return }
+                                self.view.subviews.forEach { $0.removeFromSuperview() }
+                                self.setCurrentScene(scene: scene)
+                            })
         case .CountDown:
             tmp = CountDownScene(parentView: view, gameState: gameState, requestScene: {
                 (scene: GameScenes) -> Void in
