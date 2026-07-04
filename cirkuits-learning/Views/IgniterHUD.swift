@@ -134,7 +134,7 @@ class IgniterHUD {
 
             // "Nice!" overlay, upper-centre.
             niceOverlay.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-            niceOverlay.topAnchor.constraint(equalTo: guide.topAnchor, constant: 120),
+            niceOverlay.topAnchor.constraint(equalTo: guide.topAnchor, constant: 380),
             niceOverlay.widthAnchor.constraint(equalToConstant: 340),
             niceOverlay.heightAnchor.constraint(equalToConstant: 260),
         ])
