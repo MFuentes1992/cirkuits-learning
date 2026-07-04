@@ -24,7 +24,15 @@ enum AudioInputType {
     var iconName: String {
         switch self {
         case .builtIn: return "mic.fill"
-        case .external: return "airpods"
+        case .external: return "headphones"
+        }
+    }
+
+    /// Short player-facing label for the active input.
+    var displayName: String {
+        switch self {
+        case .builtIn: return "Built-in Mic"
+        case .external: return "Headset"
         }
     }
 }

@@ -14,6 +14,15 @@ private enum MenuPalette {
     static let yellow = Color(red: 0.97, green: 0.80, blue: 0.30)
 }
 
+// MARK: - Audio input bridge
+
+/// Publishes the active audio input to SwiftUI. Detection itself lives in
+/// `SpeechRecognizer` (`currentInputType` / `onAudioInputChange`); this only
+/// carries that value into the menu view.
+final class MenuAudioInputModel: ObservableObject {
+    @Published var inputType: AudioInputType = .builtIn
+}
+
 // MARK: - Asset loading
 
 /// Loads a screen asset PNG. The artwork ships as loose PNGs (not an asset
@@ -90,6 +99,9 @@ struct MenuView: View {
     /// Invoked when the player taps Play — advances to the countdown.
     let onPlay: () -> Void
 
+    /// Which microphone will capture the player's voice.
+    @ObservedObject var audioInput: MenuAudioInputModel
+
     @State private var appeared = false
     @State private var flameBreath = false
     @State private var wavePulse = false
@@ -114,6 +126,7 @@ struct MenuView: View {
                     flameSection
                     logo
                     Spacer()
+                    audioInputBadge
                     playRow
                     Spacer().frame(height: 20)
                     secondaryButtons
@@ -176,6 +189,27 @@ struct MenuView: View {
             .frame(width: 264)
             .scaleEffect(appeared ? 1 : 0.7)
             .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: Audio input indicator
+
+    /// Tells the player which microphone will capture their voice — the
+    /// built-in mic or an attached Bluetooth/wired headset.
+    private var audioInputBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: audioInput.inputType.iconName)
+                .font(.system(size: 15, weight: .bold))
+            Text(audioInput.inputType.displayName)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(Color.black.opacity(0.28)))
+        .overlay(Capsule().stroke(MenuPalette.yellow.opacity(0.9), lineWidth: 2))
+        .scaleEffect(appeared ? 1 : 0.6)
+        .opacity(appeared ? 1 : 0)
+        .animation(.easeInOut(duration: 0.3), value: audioInput.inputType)
     }
 
     // MARK: Play button + arrows
@@ -271,11 +305,19 @@ private extension UIView {
     }
 }
 
+@MainActor
 class MenuScene: SceneProtocol {
     private var hostingController: UIHostingController<MenuView>?
 
+    /// Reused purely to detect (not record) which audio input is active, so the
+    /// menu can show the player whether their built-in mic or a headset is used.
+    private let speechRecognizer: SpeechRecognizer
+    private let audioInputModel = MenuAudioInputModel()
+
     init(parentView: UIView, gameState: GameState, requestScene: @escaping (GameScenes) -> Void) {
-        let menu = MenuView(onPlay: { requestScene(.CountDown) })
+        self.speechRecognizer = SpeechRecognizer(taskHint: .confirmation)
+
+        let menu = MenuView(onPlay: { requestScene(.CountDown) }, audioInput: audioInputModel)
         let hosting = UIHostingController(rootView: menu)
         hosting.view.backgroundColor = .clear
         hosting.view.translatesAutoresizingMaskIntoConstraints = false
@@ -294,6 +336,13 @@ class MenuScene: SceneProtocol {
         hosting.didMove(toParent: parentVC)
 
         self.hostingController = hosting
+
+        // Report the active input now, and keep it live as the player plugs in
+        // or removes a headset while sitting on the menu.
+        speechRecognizer.onAudioInputChange = { [weak audioInputModel] inputType in
+            audioInputModel?.inputType = inputType
+        }
+        speechRecognizer.refreshAudioInput()
     }
 
     func handlePinchGesture(gesture: UIPinchGestureRecognizer) {}

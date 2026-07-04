@@ -82,13 +82,21 @@ class SpeechRecognizer: NSObject {
     /// Observer token for audio route change notifications.
     private var routeObserver: NSObjectProtocol?
 
-    /// The type of audio input currently feeding the recognizer.
+    /// The audio input that will capture the player's voice: an external mic
+    /// (Bluetooth/wired headset) when one is attached, otherwise the built-in
+    /// mic. Mirrors `selectPreferredInput`.
+    ///
+    /// This inspects `availableInputs` (attached input hardware) rather than
+    /// `currentRoute` — the active route only switches to an external mic once
+    /// the session is activated during recording, so a route check reports the
+    /// built-in mic on the menu even when a headset is connected. Requires a
+    /// record-capable category to be set (see `refreshAudioInput` /
+    /// `prepareEngine`), otherwise `availableInputs` is nil and we report
+    /// built-in.
     var currentInputType: AudioInputType {
-        let portType = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portType
-        if let portType, portType != .builtInMic {
-            return .external
-        }
-        return .builtIn
+        let hasExternal = AVAudioSession.sharedInstance().availableInputs?
+            .contains { $0.portType != .builtInMic } ?? false
+        return hasExternal ? .external : .builtIn
     }
 
     // MARK: - Initialization
@@ -260,8 +268,26 @@ class SpeechRecognizer: NSObject {
         updateState(.recording)
     }
     
+    /// Configure the audio session for input monitoring *without* starting the
+    /// engine, then report the currently-active input. Lets non-recording UI —
+    /// e.g. the menu — show which mic will capture the player's voice, reusing
+    /// the same route selection and detection used during recording.
+    func refreshAudioInput() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playAndRecord, mode: .measurement,
+                                         options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
+        } catch {
+            logger.warning("Failed to configure session for input monitoring: \(error.localizedDescription)")
+        }
+
+        selectPreferredInput(audioSession)
+        logCurrentInput(audioSession)
+        notifyAudioInputChange()
+    }
+
     // MARK: - Private Helpers
-    
+
     private func prepareEngine() async throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
         let audioEngine = AVAudioEngine()
         let request = makeRequest()
