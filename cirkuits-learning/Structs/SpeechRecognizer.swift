@@ -289,28 +289,47 @@ class SpeechRecognizer: NSObject {
     // MARK: - Private Helpers
 
     private func prepareEngine() async throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
-        let audioEngine = AVAudioEngine()
-        let request = makeRequest()
+        let taskHint = self.taskHint
 
-        // Configure audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        // Activating the audio session and starting the engine are synchronous
+        // calls that can block for a noticeable time — in particular,
+        // `setActive`/`setPreferredInput` negotiate the hardware route, which is
+        // slow when switching to a Bluetooth (HFP) headset. Run them off the
+        // main thread so the game's first frames (the word + fire border) render
+        // immediately instead of waiting on audio startup.
+        let (audioEngine, request) = try await Task.detached(priority: .userInitiated) {
+            let audioEngine = AVAudioEngine()
 
-        selectPreferredInput(audioSession)
-        logCurrentInput(audioSession)
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            request.taskHint = taskHint
+            request.requiresOnDeviceRecognition = false
 
-        // Setup audio tap
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
+            // Configure audio session
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            request.append(buffer)
-        }
+            // Prefer an external input (Bluetooth/wired headset) when attached.
+            if let external = audioSession.availableInputs?.first(where: { $0.portType != .builtInMic }) {
+                try? audioSession.setPreferredInput(external)
+            }
 
-        audioEngine.prepare()
-        try audioEngine.start()
+            // Setup audio tap
+            let inputNode = audioEngine.inputNode
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
 
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+                request.append(buffer)
+            }
+
+            audioEngine.prepare()
+            try audioEngine.start()
+
+            return (audioEngine, request)
+        }.value
+
+        logCurrentInput(AVAudioSession.sharedInstance())
         notifyAudioInputChange()
 
         return (audioEngine, request)

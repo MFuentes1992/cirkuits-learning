@@ -30,7 +30,7 @@ struct GameOverView: View {
                 Spacer()
 
                 Text("TIME'S UP")
-                    .font(.system(size: 52, weight: .heavy, design: .rounded))
+                    .font(.jaro(52))
                     .foregroundColor(ink)
                     .scaleEffect(appeared ? 1 : 0.6)
                     .opacity(appeared ? 1 : 0)
@@ -39,15 +39,15 @@ struct GameOverView: View {
 
                 VStack(spacing: 6) {
                     Text("Score")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.jaro(30))
                         .foregroundColor(ink)
 
                     Text(String(format: "%03d", score))
-                        .font(.system(size: 108, weight: .heavy, design: .rounded))
+                        .font(.jaro(108))
                         .foregroundColor(ink)
 
                     Text("MAX STREAK \(maxStreak)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.jaro(22))
                         .foregroundColor(ink)
                         .tracking(1)
                 }
@@ -57,7 +57,7 @@ struct GameOverView: View {
                 Spacer().frame(height: 28)
 
                 Text("Best  \(String(format: "%03d", max(highScore, score)))")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.jaro(30))
                     .foregroundColor(ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
@@ -71,7 +71,7 @@ struct GameOverView: View {
                 HStack(spacing: 20) {
                     Button(action: onRetry) {
                         Text("RETRY")
-                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .font(.jaro(26))
                             .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
@@ -80,7 +80,7 @@ struct GameOverView: View {
                     }
                     Button(action: onExit) {
                         Text("EXIT")
-                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .font(.jaro(26))
                             .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)

@@ -81,7 +81,7 @@ class ComboGauge: UIView {
         scoreCircle.backgroundColor = IgniterPalette.pink
         addSubview(scoreCircle)
 
-        scoreLabel.font = .systemFont(ofSize: 34, weight: .heavy)
+        scoreLabel.font = AppFont.uiFont(size: 34)
         scoreLabel.textColor = .white
         scoreLabel.textAlignment = .center
         scoreLabel.text = "0"
@@ -91,7 +91,7 @@ class ComboGauge: UIView {
         badgeCircle.backgroundColor = .white
         addSubview(badgeCircle)
 
-        badgeLabel.font = .systemFont(ofSize: 20, weight: .heavy)
+        badgeLabel.font = AppFont.uiFont(size: 20)
         badgeLabel.textColor = IgniterPalette.navyInk
         badgeLabel.textAlignment = .center
         badgeLabel.text = "x00"
@@ -99,7 +99,7 @@ class ComboGauge: UIView {
 
         // STREAK label
         streakLabel.text = "STREAK"
-        streakLabel.font = .systemFont(ofSize: 22, weight: .heavy)
+        streakLabel.font = AppFont.uiFont(size: 22)
         streakLabel.textColor = .white
         streakLabel.textAlignment = .left
         addSubview(streakLabel)

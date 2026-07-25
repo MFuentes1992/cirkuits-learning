@@ -23,23 +23,6 @@ final class MenuAudioInputModel: ObservableObject {
     @Published var inputType: AudioInputType = .builtIn
 }
 
-// MARK: - Asset loading
-
-/// Loads a screen asset PNG. The artwork ships as loose PNGs (not an asset
-/// catalog), which SwiftUI's `Image(_:)` cannot resolve — so look the image
-/// up by name and fall back to a direct bundle path.
-private func menuAsset(_ name: String) -> Image {
-    if let image = UIImage(named: name) ?? bundlePNG(name) {
-        return Image(uiImage: image)
-    }
-    return Image(systemName: "exclamationmark.triangle")
-}
-
-private func bundlePNG(_ name: String) -> UIImage? {
-    guard let path = Bundle.main.path(forResource: name, ofType: "png") else { return nil }
-    return UIImage(contentsOfFile: path)
-}
-
 // MARK: - Scrolling "IGNITER///" ticker
 
 /// Horizontally scrolling ticker built from two side-by-side copies of the
@@ -50,8 +33,8 @@ private struct MenuTicker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            menuAsset("Igniter_BGP3").resizable().scaledToFit().frame(width: width)
-            menuAsset("Igniter_BGP3").resizable().scaledToFit().frame(width: width)
+            Image(screenAsset: "Igniter_BGP3").resizable().scaledToFit().frame(width: width)
+            Image(screenAsset: "Igniter_BGP3").resizable().scaledToFit().frame(width: width)
         }
         .offset(x: offset)
         .frame(width: width, alignment: .leading)
@@ -78,11 +61,11 @@ private struct BottomDecoration: View {
     var body: some View {
         let bandHeight = width / bandAspect
         ZStack(alignment: .bottom) {
-            menuAsset("Igniter_BGP1")
+            Image(screenAsset: "Igniter_BGP1")
                 .resizable().scaledToFit().frame(width: width)
 //                .offset(y: -bandHeight * 0.5)
 
-            menuAsset("Igniter_BGP2")
+            Image(screenAsset: "Igniter_BGP2")
                 .resizable().scaledToFit().frame(width: width)
 //                .offset(y: -bandHeight * 0.6)
             
@@ -115,7 +98,7 @@ struct MenuView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                menuAsset("IgniterCBG")
+                Image(screenAsset: "IgniterCBG")
                     .resizable()
                     .scaledToFill()
                     .frame(width: geo.size.width, height: geo.size.height)
@@ -153,7 +136,7 @@ struct MenuView: View {
             ripple(rightSide: true,  color: MenuPalette.pink,   delay: 0.6)
             //ripple(rightSide: true,  color: MenuPalette.yellow, delay: 1.5)
 
-            menuAsset("Igniter_IMG")
+            Image(screenAsset: "Igniter_IMG")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 96)
@@ -183,7 +166,7 @@ struct MenuView: View {
     // MARK: Logo
 
     private var logo: some View {
-        menuAsset("Igniter_Logo")
+        Image(screenAsset: "Igniter_Logo")
             .resizable()
             .scaledToFit()
             .frame(width: 264)
@@ -200,7 +183,7 @@ struct MenuView: View {
             Image(systemName: audioInput.inputType.iconName)
                 .font(.system(size: 15, weight: .bold))
             Text(audioInput.inputType.displayName)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.jaro(15))
         }
         .foregroundColor(.white)
         .padding(.horizontal, 16)
@@ -217,19 +200,19 @@ struct MenuView: View {
     private var playRow: some View {
         HStack(spacing: 50) {
             // Arrows are decorative for now — there is no stage selection yet.
-            menuAsset("Igniter_LeftArrow")
+            Image(screenAsset: "Igniter_LeftArrow")
                 .resizable().scaledToFit().frame(width: 38)
                .offset(x: arrowNudge ? -7 : 0)
                 .animation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true),
                            value: arrowNudge)
 
             Button(action: triggerPlay) {
-                menuAsset("Igniter_Play")
+                Image(screenAsset: "Igniter_Play")
                     .resizable().scaledToFit().frame(width: 150)
             }
             .buttonStyle(.plain)
 
-            menuAsset("Igniter_RightArrow")
+            Image(screenAsset: "Igniter_RightArrow")
                 .resizable().scaledToFit().frame(width: 38)
                 .offset(x: arrowNudge ? 7 : 0)
                 .animation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true),
@@ -262,7 +245,7 @@ struct MenuView: View {
                 pressed.wrappedValue = false
             }
         } label: {
-            menuAsset(image).resizable().scaledToFit().frame(width: 62)
+            Image(screenAsset: image).resizable().scaledToFit().frame(width: 62)
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed.wrappedValue ? 0.85 : 1.0)

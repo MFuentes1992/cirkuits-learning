@@ -36,6 +36,14 @@ class CountDownScene: SceneProtocol {
         self.timer = gameState.Timer
         self.elapsedTime = 3.0
 
+        // Official Igniter backdrop, so the countdown flows seamlessly into the
+        // game. Sits at the back; the Metal view draws nothing here, so a plain
+        // subview works (and is cleared automatically on the scene transition).
+        parentView.insertSubview(
+            ScreenAsset.backgroundView(ScreenAsset.igniterBackground,
+                                       frame: parentView.bounds),
+            at: 0)
+
         // Expanding ring pulse behind the number — echoes the menu's
         // sound-wave ripples.
         ringView.translatesAutoresizingMaskIntoConstraints = false
@@ -65,15 +73,6 @@ class CountDownScene: SceneProtocol {
 
     // MARK: - Number styling
 
-    /// System font with the rounded design, matching the game's playful UI.
-    private func roundedFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
-        let base = UIFont.systemFont(ofSize: size, weight: weight)
-        if let descriptor = base.fontDescriptor.withDesign(.rounded) {
-            return UIFont(descriptor: descriptor, size: size)
-        }
-        return base
-    }
-
     private func styledNumber(_ value: Int, accent: UIColor) -> NSAttributedString {
         let shadow = NSShadow()
         shadow.shadowColor = IgniterPalette.navy.withAlphaComponent(0.45)
@@ -81,7 +80,7 @@ class CountDownScene: SceneProtocol {
         shadow.shadowBlurRadius = 10
 
         return NSAttributedString(string: "\(value)", attributes: [
-            .font: roundedFont(size: 180, weight: .black),
+            .font: AppFont.uiFont(size: 180),
             .foregroundColor: IgniterPalette.cream,
             // Negative width => stroke *and* fill (the coloured outline).
             .strokeColor: accent,

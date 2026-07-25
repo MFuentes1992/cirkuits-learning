@@ -26,12 +26,7 @@ class NiceCheckmarkView: UIView {
         backgroundColor = .clear
         isUserInteractionEnabled = false
 
-        // The artwork ships as a loose PNG (not an asset catalog), so fall back
-        // to a direct bundle-path lookup — mirroring the menu screen's loader.
-        let image = UIImage(named: "Nice prompt")
-            ?? Bundle.main.path(forResource: "Nice prompt", ofType: "png").flatMap(UIImage.init(contentsOfFile:))
-
-        imageView.image = image
+        imageView.image = ScreenAsset.uiImage("Nice prompt")
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(imageView)

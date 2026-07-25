@@ -23,6 +23,7 @@ class IgniterScene: SceneProtocol {
     private var streakChain: Int
     private var currentAnswerWindow: Double
     private var wordStartSec: Double
+    private var checkMarkTime: Double
     private var gameState: GameState!
     private var hud: IgniterHUD
     private var WordFoos = [WordFoo]()
@@ -37,6 +38,11 @@ class IgniterScene: SceneProtocol {
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
+
+    // Official Igniter backdrop. Sits behind the transparent Metal view (in the
+    // root view, above the shared SwirlPatternView) so the 3D letters render on
+    // top of it. Removed on teardown so other scenes keep the shared background.
+    private weak var backgroundView: UIImageView?
     
     let wordBank: [String] = [
         "I", "am",
@@ -71,6 +77,7 @@ class IgniterScene: SceneProtocol {
         self.gameElapsedTime = 0
         self.wordStartSec = 0
         self.streakChain = 0
+        self.checkMarkTime = 0
         self.spRecTaskHint = .confirmation
         self.speechRecognition = SpeechRecognizer(taskHint: spRecTaskHint)
         
@@ -115,6 +122,7 @@ class IgniterScene: SceneProtocol {
     }
     
     func buildInitialScene(view: MTKView) {
+        installBackground(view: view)
         cameraSettings = CameraSettings(
             eye: SIMD3<Float>(0,0,100),
             center: SIMD3<Float>(0,0,0),
@@ -134,6 +142,22 @@ class IgniterScene: SceneProtocol {
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
     }
     
+    /// Places the official Igniter backdrop directly beneath the transparent
+    /// Metal view, so the 3D letters render on top of it.
+    private func installBackground(view: MTKView) {
+        guard let container = view.superview else { return }
+        let imageView = ScreenAsset.backgroundView(ScreenAsset.igniterBackground,
+                                                   frame: container.bounds)
+        container.insertSubview(imageView, belowSubview: view)
+        backgroundView = imageView
+    }
+
+    deinit {
+        // Scene teardown only clears the Metal view's subviews; our backdrop
+        // lives in the root view, so remove it explicitly.
+        backgroundView?.removeFromSuperview()
+    }
+
     func play() {}
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
@@ -197,25 +221,37 @@ class IgniterScene: SceneProtocol {
                 logger.info("Is correct: \(isCorrect)")
                 
                 if isCorrect {
+                    hud.showCorrectFeedback()
+                    gameState.PlayerState = .Correct
+                }
+            case .Correct:
+                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
+                if gameState.Timer.getElapsedTime() - checkMarkTime >= 0.99 {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
                     streakChain += 1
                     hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
-                    hud.showCorrectFeedback()
                 }
+
             case .Idle:
                 let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
                 gameElapsedTime = gameState.Timer.getElapsedTime()
                 if wordElapsedSec > gameState.WordTimeToLive {
-                    nextFoo(reward: 0)
+                    // -- revert me
+                    hud.showCorrectFeedback()
+                    gameState.PlayerState = .Correct
+                    checkMarkTime = gameState.Timer.getElapsedTime()
+                    
+                   /* nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
                     hud.incrementCombo(streakChain)
-                    wordStartSec = gameState.Timer.getElapsedTime()
+                    wordStartSec = gameState.Timer.getElapsedTime()*/
                 }
             }
+            // -- General update
             if  gameElapsedTime >= gameState.LevelDuration {
                 gameState.HighScore = gameState.Score
                 speechRecognition.stop()
