@@ -223,15 +223,15 @@ class IgniterScene: SceneProtocol {
                 if isCorrect {
                     hud.showCorrectFeedback()
                     gameState.PlayerState = .Correct
+                    checkMarkTime = gameState.Timer.getElapsedTime()
                 }
             case .Correct:
                 wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
-                if gameState.Timer.getElapsedTime() - checkMarkTime >= 0.99 {
+                if gameState.Timer.getElapsedTime() - checkMarkTime >= 1.1 {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
                     streakChain += 1
-                    hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
                 }
 
@@ -239,16 +239,11 @@ class IgniterScene: SceneProtocol {
                 let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
                 gameElapsedTime = gameState.Timer.getElapsedTime()
                 if wordElapsedSec > gameState.WordTimeToLive {
-                    // -- revert me
-                    hud.showCorrectFeedback()
-                    gameState.PlayerState = .Correct
-                    checkMarkTime = gameState.Timer.getElapsedTime()
-                    
-                   /* nextFoo(reward: 0)
+                    nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
                     hud.incrementCombo(streakChain)
-                    wordStartSec = gameState.Timer.getElapsedTime()*/
+                    wordStartSec = gameState.Timer.getElapsedTime()
                 }
             }
             // -- General update
@@ -266,6 +261,7 @@ class IgniterScene: SceneProtocol {
             if streakChain == gameState.MaxStreak  {
                 if gameState.Combo == 3 {
                     score *= 2.2
+                    hud.incrementCombo(streakChain)
                     gameState.Combo = 0
                 } else {
                     score *= 1.5

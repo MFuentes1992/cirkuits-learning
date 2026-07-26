@@ -169,17 +169,9 @@ class ComboGauge: UIView {
     }
 
     private func layoutOverlays() {
-        // Score circle overlaps the right of the funnel, vertically centred.
-        let scoreD: CGFloat = 78
-        let scoreCX = leftX + topWidth * 0.72
-        let scoreCY = barY(1) + barHeight
-        scoreCircle.frame = CGRect(x: scoreCX, y: scoreCY - scoreD / 2, width: scoreD, height: scoreD)
-        scoreCircle.layer.cornerRadius = scoreD / 2
-        scoreLabel.frame = scoreCircle.bounds
-
         // Multiplier badge, lower-left of the score circle.
         let badgeD: CGFloat = 54
-        let badgeCX = leftX + bottomWidth * 0.55
+        let badgeCX = leftX + bottomWidth * 1.1
         let badgeCY = funnelBottomY - barHeight * 0.4
         badgeCircle.frame = CGRect(x: badgeCX, y: badgeCY - badgeD / 2, width: badgeD, height: badgeD)
         badgeCircle.layer.cornerRadius = badgeD / 2
@@ -189,6 +181,14 @@ class ComboGauge: UIView {
         badgeCircle.layer.shadowOpacity = 0.25
         badgeLabel.frame = badgeCircle.bounds
 
+        // Score circle overlaps the right of the funnel, vertically centred.
+        let scoreD: CGFloat = 78
+        let scoreCX = leftX + topWidth * 0.8
+        let scoreCY = badgeCY
+        scoreCircle.frame = CGRect(x: scoreCX, y: scoreCY - (scoreD / 1.5) - ( badgeD / 2), width: scoreD, height: scoreD)
+        scoreCircle.layer.cornerRadius = scoreD / 2
+        scoreLabel.frame = scoreCircle.bounds
+        
         // STREAK under the funnel.
         streakLabel.frame = CGRect(x: leftX - 4, y: funnelBottomY + 8, width: 140, height: 28)
     }

@@ -39,7 +39,7 @@ struct GameOverView: View {
 
                 VStack(spacing: 6) {
                     Text("Score")
-                        .font(.jaro(30))
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundColor(ink)
 
                     Text(String(format: "%03d", score))
@@ -47,7 +47,7 @@ struct GameOverView: View {
                         .foregroundColor(ink)
 
                     Text("MAX STREAK \(maxStreak)")
-                        .font(.jaro(22))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundColor(ink)
                         .tracking(1)
                 }
@@ -57,7 +57,7 @@ struct GameOverView: View {
                 Spacer().frame(height: 28)
 
                 Text("Best  \(String(format: "%03d", max(highScore, score)))")
-                    .font(.jaro(30))
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundColor(ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
@@ -71,7 +71,7 @@ struct GameOverView: View {
                 HStack(spacing: 20) {
                     Button(action: onRetry) {
                         Text("RETRY")
-                            .font(.jaro(26))
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
                             .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
@@ -80,7 +80,7 @@ struct GameOverView: View {
                     }
                     Button(action: onExit) {
                         Text("EXIT")
-                            .font(.jaro(26))
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
                             .foregroundColor(ink)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)

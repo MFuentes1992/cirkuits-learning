@@ -117,13 +117,13 @@ class IgniterHUD {
 
             // Streak funnel, bottom-left.
             comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 10),
-            comboGauge.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -6),
+            comboGauge.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -100),
             comboGauge.widthAnchor.constraint(equalToConstant: 220),
             comboGauge.heightAnchor.constraint(equalToConstant: 210),
 
             // Buttons, bottom-right.
             pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
-            pauseButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -18),
+            pauseButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -120),
             pauseButton.widthAnchor.constraint(equalToConstant: buttonDiameter),
             pauseButton.heightAnchor.constraint(equalToConstant: buttonDiameter),
 
@@ -134,9 +134,9 @@ class IgniterHUD {
 
             // "Nice!" overlay, upper-centre.
             niceOverlay.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-            niceOverlay.topAnchor.constraint(equalTo: guide.topAnchor, constant: 100),
-            niceOverlay.widthAnchor.constraint(equalToConstant: 100),
-            niceOverlay.heightAnchor.constraint(equalToConstant: 100),
+            niceOverlay.centerYAnchor.constraint(equalTo: parentView.centerYAnchor, constant: -75),
+            niceOverlay.widthAnchor.constraint(equalToConstant: 150),
+            niceOverlay.heightAnchor.constraint(equalToConstant: 150),
         ])
 
         fireBorder.start()
@@ -204,7 +204,7 @@ class IgniterHUD {
     //TODO: Rename this to incrementStreak
     func incrementCombo(_ value: Int) {
         comboGauge.incrementCombo(value: value)
-        fireBorder.setStreak(value, maxStreak: gameState.MaxStreak)
+        // fireBorder.setStreak(value, maxStreak: gameState.MaxStreak)
     }
 
     func showCorrectFeedback() {
