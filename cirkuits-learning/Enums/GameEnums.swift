@@ -48,6 +48,7 @@ enum PlayerState {
     case Speaking
     case Idle
     case Correct
+    case Wrong
 }
 
 let MaxStreak = 3

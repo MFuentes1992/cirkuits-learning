@@ -24,6 +24,7 @@ class IgniterScene: SceneProtocol {
     private var currentAnswerWindow: Double
     private var wordStartSec: Double
     private var checkMarkTime: Double
+    private var switchTime: Double
     private var gameState: GameState!
     private var hud: IgniterHUD
     private var WordFoos = [WordFoo]()
@@ -78,6 +79,7 @@ class IgniterScene: SceneProtocol {
         self.wordStartSec = 0
         self.streakChain = 0
         self.checkMarkTime = 0
+        self.switchTime = 0
         self.spRecTaskHint = .confirmation
         self.speechRecognition = SpeechRecognizer(taskHint: spRecTaskHint)
         
@@ -204,12 +206,9 @@ class IgniterScene: SceneProtocol {
                 timeToAnswer = gameState.Timer.getElapsedTime() - wordStartSec
                 //  -- No updates on elapsed time
                 if timeToAnswer >= gameState.WordTimeToAnswer {
-                    timeToAnswer = 0
-                    nextFoo(reward: 0)
-                    streakChain = 0
-                    hud.incrementCombo(streakChain)
-                    gameState.PlayerState = .Idle
-                    wordStartSec = gameState.Timer.getElapsedTime()
+                    hud.showIncorrectFeedback()
+                    gameState.PlayerState = .Wrong
+                    switchTime = gameState.Timer.getElapsedTime()
                 }
                 
                 // --- Evaluate if correct answer
@@ -220,7 +219,7 @@ class IgniterScene: SceneProtocol {
                 let isCorrect = answer == goal
                 logger.info("Is correct: \(isCorrect)")
                 
-                if isCorrect {
+                if isCorrect && gameState.PlayerState != .Wrong{
                     hud.showCorrectFeedback()
                     gameState.PlayerState = .Correct
                     checkMarkTime = gameState.Timer.getElapsedTime()
@@ -234,19 +233,26 @@ class IgniterScene: SceneProtocol {
                     streakChain += 1
                     wordStartSec = gameState.Timer.getElapsedTime()
                 }
-
-            case .Idle:
-                let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
-                gameElapsedTime = gameState.Timer.getElapsedTime()
-                if wordElapsedSec > gameState.WordTimeToLive {
+            case .Wrong:
+                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
+                if gameState.Timer.getElapsedTime() - switchTime >= 1.1 {
                     nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
                     hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
+                    gameState.PlayerState = .Idle
+                }
+            case .Idle:
+                let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
+                gameElapsedTime = gameState.Timer.getElapsedTime()
+                if wordElapsedSec > gameState.WordTimeToLive {
+                    switchTime = gameState.Timer.getElapsedTime()
+                    hud.showIncorrectFeedback()
+                    gameState.PlayerState = .Wrong
                 }
             }
-            // -- General update
+            // -- General updating operations ------
             if  gameElapsedTime >= gameState.LevelDuration {
                 gameState.HighScore = gameState.Score
                 speechRecognition.stop()
@@ -259,15 +265,10 @@ class IgniterScene: SceneProtocol {
             hud.updateHudScore(score: Int(score))
             hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
             if streakChain == gameState.MaxStreak  {
-                if gameState.Combo == 3 {
-                    score *= 2.2
-                    hud.incrementCombo(streakChain)
-                    gameState.Combo = 0
-                } else {
-                    score *= 1.5
-                }
+                // score = score + (Double(streakChain) * 0.66)
+                // gameState.Combo = gameState.Combo + 1
+                hud.incrementCombo(gameState.Combo)
                 streakChain = 0
-                gameState.Combo = gameState.Combo + 1
             }
             
             gameState.Score = Int(score)

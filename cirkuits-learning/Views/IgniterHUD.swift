@@ -19,11 +19,12 @@ class IgniterHUD {
     // Legacy labels kept for compatibility; hidden in the new design.
     private var timerLabel: UILabel
     private var scoreLabel: UILabel
-
+    
     // New HUD elements
     private let progressDots: ProgressDotsView
     private let comboGauge: ComboGauge
     private let niceOverlay: NiceCheckmarkView
+    private let missedOverlay: MissedWordView
     private let fireBorder: FireBorderView
     private var pauseButton: UIButton
     private var microphoneButton: UIButton
@@ -45,6 +46,7 @@ class IgniterHUD {
         self.comboGauge = ComboGauge(frame: CGRect(x: 0, y: 0, width: 220, height: 210),
                                      maxCombo: MaxStreak)
         self.niceOverlay = NiceCheckmarkView()
+        self.missedOverlay = MissedWordView()
         self.fireBorder = FireBorderView()
         self.microphoneButton = UIButton(type: .custom)
         self.pauseButton = UIButton(type: .custom)
@@ -100,6 +102,10 @@ class IgniterHUD {
         niceOverlay.translatesAutoresizingMaskIntoConstraints = false
         niceOverlay.alpha = 0
         parentView.addSubview(niceOverlay)
+        
+        missedOverlay.translatesAutoresizingMaskIntoConstraints = false
+        missedOverlay.alpha = 0
+        parentView.addSubview(missedOverlay)
 
         let guide = parentView.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
@@ -137,6 +143,12 @@ class IgniterHUD {
             niceOverlay.centerYAnchor.constraint(equalTo: parentView.centerYAnchor, constant: -75),
             niceOverlay.widthAnchor.constraint(equalToConstant: 150),
             niceOverlay.heightAnchor.constraint(equalToConstant: 150),
+            
+           missedOverlay.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+           missedOverlay.centerYAnchor.constraint(equalTo: parentView.centerYAnchor, constant: -75),
+           missedOverlay.widthAnchor.constraint(equalToConstant: 150),
+           missedOverlay.heightAnchor.constraint(equalToConstant: 150),
+
         ])
 
         fireBorder.start()
@@ -209,5 +221,9 @@ class IgniterHUD {
 
     func showCorrectFeedback() {
         niceOverlay.play()
+    }
+    
+    func showIncorrectFeedback() {
+        missedOverlay.play()
     }
 }
