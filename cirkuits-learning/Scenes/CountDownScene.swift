@@ -36,6 +36,11 @@ class CountDownScene: SceneProtocol {
         self.timer = gameState.Timer
         self.elapsedTime = 3.0
 
+        // Negotiate the audio route now rather than when the game starts.
+        // Activating the session takes ~1.5s on a Bluetooth headset, and paying
+        // it here means the mic is live the moment the first word appears.
+        SpeechRecognizer.prewarmAudioSession()
+
         // Official Igniter backdrop, so the countdown flows seamlessly into the
         // game. Sits at the back; the Metal view draws nothing here, so a plain
         // subview works (and is cleared automatically on the scene transition).

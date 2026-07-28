@@ -35,7 +35,6 @@ class IgniterScene: SceneProtocol {
     
     // -- Local Game Track
     private var score: Double = 0
-    private var combo: Int = 0
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
@@ -230,8 +229,10 @@ class IgniterScene: SceneProtocol {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
-                    streakChain += 1
+                    gameState.Combo = gameState.Combo + 1
+                    hud.incrementCombo(gameState.Combo)
                     wordStartSec = gameState.Timer.getElapsedTime()
+                    speechRecognition.pause()
                 }
             case .Wrong:
                 wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
@@ -239,6 +240,7 @@ class IgniterScene: SceneProtocol {
                     nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
+                    gameState.Combo = 0
                     hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
                     gameState.PlayerState = .Idle
@@ -246,6 +248,7 @@ class IgniterScene: SceneProtocol {
             case .Idle:
                 let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
                 gameElapsedTime = gameState.Timer.getElapsedTime()
+                try? speechRecognition.resume()
                 if wordElapsedSec > gameState.WordTimeToLive {
                     switchTime = gameState.Timer.getElapsedTime()
                     hud.showIncorrectFeedback()
@@ -264,16 +267,15 @@ class IgniterScene: SceneProtocol {
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
             hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
-            if streakChain == gameState.MaxStreak  {
-                // score = score + (Double(streakChain) * 0.66)
-                // gameState.Combo = gameState.Combo + 1
-                hud.incrementCombo(gameState.Combo)
-                streakChain = 0
+            if gameState.Combo == gameState.StreakGoal  {
+                streakChain = streakChain + 1
+                gameState.Combo = 0
             }
             
             gameState.Score = Int(score)
-            gameState.Streak = streakChain
+            gameState.MaxStreak = streakChain
         }
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
 }
+

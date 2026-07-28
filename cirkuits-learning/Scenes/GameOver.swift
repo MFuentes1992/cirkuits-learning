@@ -152,7 +152,7 @@ class GameOverScene: SceneProtocol {
 
     init(parentView: UIView, gameState: GameState, requestScene: @escaping (GameScenes) -> Void) {
         let view = GameOverView(
-            score: gameState.Score,
+            score: gameState.MaxStreak <= 0 ? gameState.Score : gameState.Score + (gameState.MaxStreak),
             highScore: gameState.HighScore,
             maxStreak: gameState.MaxStreak,
             onRetry: { requestScene(.CountDown) },
