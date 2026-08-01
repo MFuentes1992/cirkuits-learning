@@ -27,6 +27,7 @@ class GameState {
     private var wordTimeToAnswer: TimeInterval!
     private var stage: Int!
     private var maxStreak: Int = 0
+    private var streakGoal: Int = 0
     private var streak: Int = 0
     
     
@@ -77,11 +78,15 @@ class GameState {
     }
     var MaxStreak:Int {
         get { return maxStreak }
-        set { maxStreak = newValue }
+        set { maxStreak = max(maxStreak, newValue) }
     }
     var Streak:Int {
         get { return streak }
         set { streak = newValue }
+    }
+    var StreakGoal:Int {
+        get { return streakGoal }
+        set { streakGoal = newValue }
     }
     var CorrectAnswer: Bool {
         get { return correctanswer }
@@ -124,13 +129,19 @@ class GameState {
         self.combo = 0
         self.score = 0
         self.highScore = 0
-        self.maxStreak = 3
+        self.maxStreak = 0
+        self.streakGoal = 0
     }
     
     func reset() {
         score = 0
         combo = 0
         streak = 0
+        // Per-run peak, so it has to clear between runs. `MaxStreak`'s setter
+        // only ever raises the value, so without this the previous run's best
+        // survives and every later run reports it instead of its own. Note
+        // `highScore` is deliberately *not* reset — that one is meant to persist.
+        maxStreak = 0
         capturedAnswer = ""
         isAnswering = false
         correctanswer = false

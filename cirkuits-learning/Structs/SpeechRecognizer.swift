@@ -64,6 +64,17 @@ class SpeechRecognizer: NSObject {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var taskHint: SFSpeechRecognitionTaskHint
+
+    /// Incremented every time a recognition task is started. Callbacks carry the
+    /// generation they were created with and are ignored once it goes stale, so
+    /// a cancelled task's trailing callback can't tear down its replacement.
+    private var taskGeneration: UInt64 = 0
+
+    /// Consecutive recognition failures with no successful result in between.
+    /// Bounded so a genuinely broken session gives up instead of restarting
+    /// forever.
+    private var consecutiveFailures = 0
+    private static let maxConsecutiveFailures = 3
     private let logger = Logger(subsystem: "com.cirkuits.igniter", category: "SpeechRecognizer")
     
     private(set) var currentState: RecognitionState = .idle
@@ -82,13 +93,21 @@ class SpeechRecognizer: NSObject {
     /// Observer token for audio route change notifications.
     private var routeObserver: NSObjectProtocol?
 
-    /// The type of audio input currently feeding the recognizer.
+    /// The audio input that will capture the player's voice: an external mic
+    /// (Bluetooth/wired headset) when one is attached, otherwise the built-in
+    /// mic. Mirrors `selectPreferredInput`.
+    ///
+    /// This inspects `availableInputs` (attached input hardware) rather than
+    /// `currentRoute` — the active route only switches to an external mic once
+    /// the session is activated during recording, so a route check reports the
+    /// built-in mic on the menu even when a headset is connected. Requires a
+    /// record-capable category to be set (see `refreshAudioInput` /
+    /// `prepareEngine`), otherwise `availableInputs` is nil and we report
+    /// built-in.
     var currentInputType: AudioInputType {
-        let portType = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portType
-        if let portType, portType != .builtInMic {
-            return .external
-        }
-        return .builtIn
+        let hasExternal = AVAudioSession.sharedInstance().availableInputs?
+            .contains { $0.portType != .builtInMic } ?? false
+        return hasExternal ? .external : .builtIn
     }
 
     // MARK: - Initialization
@@ -106,9 +125,15 @@ class SpeechRecognizer: NSObject {
             forName: AVAudioSession.routeChangeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
+            let reasonValue = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             Task { @MainActor [weak self] in
-                self?.notifyAudioInputChange()
+                guard let self else { return }
+                let reason = reasonValue
+                    .flatMap(AVAudioSession.RouteChangeReason.init(rawValue:))
+                    .map { String(describing: $0) } ?? "unknown"
+                self.dumpAudioDiagnostics("route-change(\(reason))")
+                self.notifyAudioInputChange()
             }
         }
     }
@@ -178,6 +203,7 @@ class SpeechRecognizer: NSObject {
             let (engine, request) = try await prepareEngine()
             self.audioEngine = engine
             self.request = request
+            self.consecutiveFailures = 0
 
             updateState(.recording)
 
@@ -195,6 +221,9 @@ class SpeechRecognizer: NSObject {
     
     /// Stop speech recognition
     func stop() {
+        // Retire the current generation so the cancelled task's trailing
+        // callback can't reopen a session we're tearing down.
+        taskGeneration &+= 1
         task?.cancel()
         task = nil
 
@@ -235,13 +264,17 @@ class SpeechRecognizer: NSObject {
 
         let newRequest = makeRequest()
         let recordingFormat = inputNode.outputFormat(forBus: 0)
+        let probe = AudioLevelProbe(sampleRate: recordingFormat.sampleRate, logger: logger)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             newRequest.append(buffer)
+            probe.observe(peak: SpeechRecognizer.peakAmplitude(buffer),
+                          frames: Int(buffer.frameLength))
         }
         self.request = newRequest
 
         startRecognitionTask(with: newRequest)
         logger.info("Speech recognition restarted")
+        dumpAudioDiagnostics("restart")
     }
     
     /// Pause recognition temporarily
@@ -260,31 +293,149 @@ class SpeechRecognizer: NSObject {
         updateState(.recording)
     }
     
-    // MARK: - Private Helpers
-    
-    private func prepareEngine() async throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
-        let audioEngine = AVAudioEngine()
-        let request = makeRequest()
-
-        // Configure audio session
+    /// Configure the audio session for input monitoring *without* starting the
+    /// engine, then report the currently-active input. Lets non-recording UI —
+    /// e.g. the menu — show which mic will capture the player's voice, reusing
+    /// the same route selection and detection used during recording.
+    func refreshAudioInput() {
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        do {
+            try Self.configureSessionCategory(audioSession)
+        } catch {
+            logger.warning("Failed to configure session for input monitoring: \(error.localizedDescription)")
+        }
 
         selectPreferredInput(audioSession)
         logCurrentInput(audioSession)
+        dumpAudioDiagnostics("refresh-audio-input")
+        notifyAudioInputChange()
+    }
 
-        // Setup audio tap
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
+    // MARK: - Audio Session Configuration
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            request.append(buffer)
+    /// Applies the category/mode/options used for recording. Shared by every
+    /// entry point so the three call sites can't drift apart.
+    nonisolated static func configureSessionCategory(_ session: AVAudioSession) throws {
+        try session.setCategory(.playAndRecord, mode: .measurement,
+                                options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
+    }
+
+    /// Routes capture to an external mic (Bluetooth/wired headset) when one is
+    /// attached. Best-effort: falls through to the built-in mic on failure.
+    @discardableResult
+    nonisolated static func selectExternalInput(_ session: AVAudioSession) -> AVAudioSessionPortDescription? {
+        guard let external = session.availableInputs?.first(where: { $0.portType != .builtInMic }) else {
+            return nil
         }
+        try? session.setPreferredInput(external)
+        return external
+    }
 
-        audioEngine.prepare()
-        try audioEngine.start()
+    /// Activates the shared audio session ahead of recording so the hardware
+    /// route is already negotiated by the time the game starts.
+    ///
+    /// Bluetooth HFP link setup costs ~1.5s, and it is `setActive(true)` that
+    /// triggers it — not `setCategory`. Without this the cost lands inside
+    /// `prepareEngine` when the Igniter scene appears, and the player spends the
+    /// first word unable to answer. Calling this during the countdown spends
+    /// that time while nothing is being asked of them.
+    ///
+    /// Safe to call from anywhere: `AVAudioSession` is process-wide, so warming
+    /// it settles the route for whichever `SpeechRecognizer` records later. Runs
+    /// off the main thread because the activation call blocks.
+    nonisolated static func prewarmAudioSession() {
+        Task.detached(priority: .userInitiated) {
+            let logger = Logger(subsystem: "com.cirkuits.igniter", category: "SpeechRecognizer")
+            let session = AVAudioSession.sharedInstance()
+            let start = Date()
+            do {
+                try configureSessionCategory(session)
+                try session.setActive(true, options: .notifyOthersOnDeactivation)
+                let external = selectExternalInput(session)
+                let elapsed = Date().timeIntervalSince(start)
+                logger.notice("""
+                    [prewarm] session active in \(String(format: "%.3f", elapsed), privacy: .public)s \
+                    input=\(external?.portName ?? "<built-in>", privacy: .public)
+                    """)
+            } catch {
+                logger.warning("[prewarm] failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
 
+    // MARK: - Private Helpers
+
+    /// Peak amplitude of a captured buffer, 0...1. Used only by the audio-level
+    /// probe below — lets us distinguish "wrong mic selected" from "right mic,
+    /// but no signal reaching us".
+    private nonisolated static func peakAmplitude(_ buffer: AVAudioPCMBuffer) -> Float {
+        guard let channels = buffer.floatChannelData else { return 0 }
+        let frames = Int(buffer.frameLength)
+        var peak: Float = 0
+        for channel in 0..<Int(buffer.format.channelCount) {
+            let samples = channels[channel]
+            for frame in 0..<frames {
+                peak = max(peak, abs(samples[frame]))
+            }
+        }
+        return peak
+    }
+
+    private func prepareEngine() async throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
+        let taskHint = self.taskHint
+        let logger = self.logger
+
+        // Activating the audio session and starting the engine are synchronous
+        // calls that can block for a noticeable time — in particular,
+        // `setActive`/`setPreferredInput` negotiate the hardware route, which is
+        // slow when switching to a Bluetooth (HFP) headset. Run them off the
+        // main thread so the game's first frames (the word + fire border) render
+        // immediately instead of waiting on audio startup.
+        let (audioEngine, request) = try await Task.detached(priority: .userInitiated) {
+            let audioEngine = AVAudioEngine()
+
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            request.taskHint = taskHint
+            request.requiresOnDeviceRecognition = false
+
+            // Configure audio session. If `prewarmAudioSession()` already ran
+            // (see `CountDownScene`), the session is active and the Bluetooth
+            // route is settled, so this costs close to nothing.
+            let sessionStart = Date()
+            let audioSession = AVAudioSession.sharedInstance()
+            try SpeechRecognizer.configureSessionCategory(audioSession)
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            SpeechRecognizer.selectExternalInput(audioSession)
+            let sessionElapsed = Date().timeIntervalSince(sessionStart)
+            logger.notice("""
+                [engine-start] session ready in \
+                \(String(format: "%.3f", sessionElapsed), privacy: .public)s
+                """)
+
+            // Setup audio tap
+            let inputNode = audioEngine.inputNode
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+            // Rolling peak, reported ~1x/sec so the log stays readable. A steady
+            // 0.000 while speaking means the tap is attached to a mic that isn't
+            // hearing anything — a different failure than the wrong route.
+            let probe = AudioLevelProbe(sampleRate: recordingFormat.sampleRate, logger: logger)
+
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+                request.append(buffer)
+                probe.observe(peak: SpeechRecognizer.peakAmplitude(buffer),
+                              frames: Int(buffer.frameLength))
+            }
+
+            audioEngine.prepare()
+            try audioEngine.start()
+
+            return (audioEngine, request)
+        }.value
+
+        logCurrentInput(AVAudioSession.sharedInstance())
+        dumpAudioDiagnostics("engine-started", engine: audioEngine)
         notifyAudioInputChange()
 
         return (audioEngine, request)
@@ -330,6 +481,48 @@ class SpeechRecognizer: NSObject {
         }
     }
 
+    /// Dumps everything needed to tell whether the headset mic is *actually*
+    /// capturing, as opposed to merely being attached. Logged at `.notice` so it
+    /// survives a default `log stream` (unlike the `.info` calls elsewhere).
+    ///
+    /// Read it as: `available` is attached hardware, `ROUTE` is what is really
+    /// capturing. They disagree when the session fell back to the built-in mic.
+    /// `tapFormat` corroborates — Bluetooth HFP input runs at 8k/16k, the
+    /// built-in mic at 48k, so a 48k tap on a headset route means the engine
+    /// grabbed `inputNode` before the route settled.
+    func dumpAudioDiagnostics(_ context: String, engine: AVAudioEngine? = nil) {
+        let engine = engine ?? audioEngine
+        let session = AVAudioSession.sharedInstance()
+
+        let available = (session.availableInputs ?? [])
+            .map { "\($0.portName)[\($0.portType.rawValue)]" }
+            .joined(separator: ", ")
+        let route = session.currentRoute.inputs
+            .map { "\($0.portName)[\($0.portType.rawValue)]" }
+            .joined(separator: ", ")
+        let preferred = session.preferredInput
+            .map { "\($0.portName)[\($0.portType.rawValue)]" } ?? "<none>"
+
+        logger.notice("""
+            [\(context, privacy: .public)] \
+            available={\(available, privacy: .public)} \
+            ROUTE={\(route.isEmpty ? "<none>" : route, privacy: .public)} \
+            preferred=\(preferred, privacy: .public) \
+            category=\(session.category.rawValue, privacy: .public) \
+            mode=\(session.mode.rawValue, privacy: .public) \
+            sessionSampleRate=\(session.sampleRate) \
+            engineRunning=\(engine?.isRunning ?? false)
+            """)
+
+        if let inputNode = engine?.inputNode {
+            let format = inputNode.outputFormat(forBus: 0)
+            logger.notice("""
+                [\(context, privacy: .public)] \
+                tapFormat=\(format.sampleRate)Hz ch=\(format.channelCount)
+                """)
+        }
+    }
+
     private func makeRequest() -> SFSpeechAudioBufferRecognitionRequest {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -340,34 +533,107 @@ class SpeechRecognizer: NSObject {
 
     private func startRecognitionTask(with request: SFSpeechAudioBufferRecognitionRequest) {
         guard let recognizer else { return }
+
+        taskGeneration &+= 1
+        let generation = taskGeneration
+
         self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
 
+                // A cancelled task still delivers a trailing callback. Ignore it
+                // if we've already moved on, otherwise it would tear down the
+                // session that replaced it.
+                guard generation == self.taskGeneration else { return }
+
                 if let error {
-                    self.logger.error("Recognition error: \(error.localizedDescription)")
-                    self.updateState(.error(error))
-                    self.stop()
+                    self.handleRecognitionFailure(error)
                     return
                 }
 
                 if let result {
                     let transcript = result.bestTranscription.formattedString
                     self.currentTranscript = transcript
+                    self.consecutiveFailures = 0
                     self.onTranscriptionUpdate?(transcript)
 
                     if result.isFinal {
+                        // The recognizer finalizes after a pause in speech, which
+                        // in this game happens after every single answer. Keep
+                        // the engine up and start a fresh request so the player
+                        // can answer the next word.
                         self.logger.info("Final transcript: \(transcript) — restarting")
-                        self.stop()
+                        self.restart()
                     }
                 }
             }
         }
     }
 
+    /// Recognition errors are mostly routine here — "no speech detected" fires
+    /// whenever the player stays quiet through a word. Recover by starting a new
+    /// request on the still-running engine rather than ending the session, and
+    /// only give up once failures repeat with no successful result between them.
+    private func handleRecognitionFailure(_ error: Error) {
+        consecutiveFailures += 1
+        logger.error("""
+            Recognition error (\(self.consecutiveFailures)/\(Self.maxConsecutiveFailures)): \
+            \(error.localizedDescription)
+            """)
+
+        guard consecutiveFailures < Self.maxConsecutiveFailures,
+              let audioEngine, audioEngine.isRunning else {
+            logger.error("Giving up on recognition after repeated failures")
+            updateState(.error(error))
+            stop()
+            return
+        }
+
+        restart()
+    }
+
     private func updateState(_ newState: RecognitionState) {
         currentState = newState
         onStateChange?(newState)
+    }
+}
+
+// MARK: - Audio Level Probe
+
+/// Accumulates the peak amplitude of captured audio and logs it about once per
+/// second. Diagnostic only — it answers "is the selected mic actually hearing
+/// anything?", which the route information alone can't tell us.
+///
+/// `observe(peak:frames:)` is called from the real-time audio thread, so the
+/// mutable state is guarded by a lock and the work per buffer is kept trivial.
+private final class AudioLevelProbe: @unchecked Sendable {
+    private let sampleRate: Double
+    private let logger: Logger
+    private let lock = NSLock()
+    private var peak: Float = 0
+    private var framesSinceReport = 0
+
+    init(sampleRate: Double, logger: Logger) {
+        self.sampleRate = sampleRate
+        self.logger = logger
+    }
+
+    func observe(peak bufferPeak: Float, frames: Int) {
+        lock.lock()
+        peak = max(peak, bufferPeak)
+        framesSinceReport += frames
+
+        guard sampleRate > 0, Double(framesSinceReport) >= sampleRate else {
+            lock.unlock()
+            return
+        }
+
+        let reportedPeak = peak
+        peak = 0
+        framesSinceReport = 0
+        lock.unlock()
+
+        logger.notice("Audio level peak=\(String(format: "%.4f", reportedPeak), privacy: .public)")
     }
 }
 

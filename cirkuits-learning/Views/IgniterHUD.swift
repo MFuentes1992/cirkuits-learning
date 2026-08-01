@@ -2,260 +2,233 @@
 //  IgniterHUD.swift
 //  cirkuits-learning
 //
-//  Created by Marco Fuentes Jiménez on 22/03/26.
+//  Reworked to match the Igniter target design:
+//   • top pink progress-dot row
+//   • bottom-left streak funnel (with red score circle + xNN badge)
+//   • pink circular mic / pause buttons, bottom-right
+//   • layered teal "Nice!" checkmark on a correct answer
+//   • animated pixel fire border tied to the streak ("ignition")
 //
-
 import Foundation
 import SwiftUI
 import os
 
 class IgniterHUD {
     private let logger = Logger(subsystem: "com.cirkuits.igniter", category: "IgniterHUD")
+
+    // Legacy labels kept for compatibility; hidden in the new design.
     private var timerLabel: UILabel
     private var scoreLabel: UILabel
-    private var feedbackLabel: UILabel
+    
+    // New HUD elements
+    private let progressDots: ProgressDotsView
+    private let comboGauge: ComboGauge
+    private let niceOverlay: NiceCheckmarkView
+    private let missedOverlay: MissedWordView
+    private let fireBorder: FireBorderView
     private var pauseButton: UIButton
     private var microphoneButton: UIButton
-    private var audioInputIndicator: UIImageView
+
     private var parentView: UIView
     private var microphoneState: MicrophoneState
     private weak var speechRecognition: SpeechRecognizer?
-    private var comboGauge: ComboGauge
-    private var lookAndFeel: UILayoutLookAndFeel
     private var gameState: GameState
     private var levelRemainingTime: TimeInterval
+
+    private let buttonDiameter: CGFloat = 56
 
     init(parentView: UIView, gameState: GameState, speechRecognizer: SpeechRecognizer? = nil) {
         self.gameState = gameState
         self.parentView = parentView
         self.timerLabel = UILabel()
         self.scoreLabel = UILabel()
-        self.feedbackLabel = UILabel()
-        self.microphoneButton = UIButton(type: .system)
-        self.pauseButton = UIButton(type: .system)
-        self.audioInputIndicator = UIImageView()
+        self.progressDots = ProgressDotsView(total: 8)
+        self.comboGauge = ComboGauge(frame: CGRect(x: 0, y: 0, width: 220, height: 210),
+                                     totalBars: gameState.StreakGoal)
+        self.niceOverlay = NiceCheckmarkView()
+        self.missedOverlay = MissedWordView()
+        self.fireBorder = FireBorderView()
+        self.microphoneButton = UIButton(type: .custom)
+        self.pauseButton = UIButton(type: .custom)
         self.levelRemainingTime = gameState.LevelDuration
-        self.comboGauge = ComboGauge(frame: CGRect(x: 0, y:0, width: 100, height: 100), maxCombo: MaxStreak)
-        lookAndFeel = UILayoutLookAndFeel(color: .white, foreColor: .darkGray, buttonSize: 32, fontSize: 32)
         self.speechRecognition = speechRecognizer
-        microphoneState = .unmuted
+        self.microphoneState = .unmuted
         setUpHUD()
-        setUpAudioInputIndicator()
     }
 
-    /// Reflects the current audio input device in the HUD and keeps the
-    /// indicator in sync when the input switches (e.g. built-in mic ↔ Bluetooth headset).
-    private func setUpAudioInputIndicator() {
-        Task { @MainActor in
-            guard let speechRecognition = speechRecognition else {
-                updateAudioInputIndicator(.builtIn, animated: false)
-                return
-            }
-            updateAudioInputIndicator(speechRecognition.currentInputType, animated: false)
-            speechRecognition.onAudioInputChange = { [weak self] inputType in
-                self?.updateAudioInputIndicator(inputType, animated: true)
-            }
-        }
+    // MARK: Setup
+    private func makeCircleButton(icon: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .custom)
+        button.backgroundColor = IgniterPalette.pink
+        button.layer.cornerRadius = buttonDiameter / 2
+        button.tintColor = IgniterPalette.cream
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 3)
+        button.layer.shadowRadius = 4
+        button.layer.shadowOpacity = 0.2
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
+        button.setImage(UIImage(systemName: icon, withConfiguration: config), for: .normal)
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
     }
 
-    /// Updates the audio input icon, pulsing it when the change is user-visible.
-    private func updateAudioInputIndicator(_ inputType: AudioInputType, animated: Bool) {
-        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
-        audioInputIndicator.image = UIImage(systemName: inputType.iconName, withConfiguration: config)
-        audioInputIndicator.tintColor = inputType == .external ? .systemBlue : lookAndFeel.color
-
-        guard animated else { return }
-        audioInputIndicator.layer.removeAllAnimations()
-        audioInputIndicator.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
-        UIView.animate(
-            withDuration: 0.35,
-            delay: 0,
-            usingSpringWithDamping: 0.5,
-            initialSpringVelocity: 0.6,
-            options: .curveEaseOut,
-            animations: {
-                self.audioInputIndicator.transform = .identity
-            })
-    }
-    
     func setUpHUD() {
-        timerLabel.font = .monospacedSystemFont(ofSize: lookAndFeel.fontSize, weight: .bold)
-        timerLabel.textColor = lookAndFeel.color
-        timerLabel.shadowColor = lookAndFeel.foreColor
-        timerLabel.shadowOffset = CGSize(width: 2, height: 2)
-        timerLabel.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(timerLabel)
-        
-        // Score label
-        scoreLabel.font = .monospacedSystemFont(ofSize: lookAndFeel.fontSize, weight: .bold)
-        scoreLabel.textColor = lookAndFeel.color
-        scoreLabel.shadowColor = lookAndFeel.foreColor
-        scoreLabel.shadowOffset = CGSize(width: 2, height: 2)
-        scoreLabel.translatesAutoresizingMaskIntoConstraints = false
+        // Legacy labels: kept updating but not shown (design has no on-screen timer/score text).
+        timerLabel.isHidden = true
+        scoreLabel.isHidden = true
+        timerLabel.text = "00:00"
         scoreLabel.text = "000"
-        parentView.addSubview(scoreLabel)
 
-        // Correct-answer feedback label
-        feedbackLabel.font = .systemFont(ofSize: 48, weight: .heavy)
-        feedbackLabel.textColor = .systemGreen
-        feedbackLabel.shadowColor = lookAndFeel.foreColor
-        feedbackLabel.shadowOffset = CGSize(width: 2, height: 2)
-        feedbackLabel.text = "✅ Good!"
-        feedbackLabel.textAlignment = .center
-        feedbackLabel.alpha = 0
-        feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(feedbackLabel)
+        // Fire border (added first -> sits behind the HUD chrome, above the letters).
+        fireBorder.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(fireBorder)
 
-        // Pause Button
-        let pauseConfiguration = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
-        pauseButton.setImage(UIImage(systemName: "pause.circle.fill", withConfiguration: pauseConfiguration), for: .normal)
-        pauseButton.tintColor = lookAndFeel.color
-        pauseButton.addTarget(self, action: #selector(togglePause), for: .touchUpInside)
-        pauseButton.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(pauseButton)
-        
-        // Mute Button
-        let microphoneConfiguration = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
-        microphoneButton.setImage(UIImage(systemName: "microphone.circle.fill", withConfiguration: microphoneConfiguration), for: .normal)
-        microphoneButton.tintColor = lookAndFeel.color
-        microphoneButton.addTarget(self, action: #selector(toggleMute), for: .touchUpInside)
-        microphoneButton.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(microphoneButton)
+        // Progress dots
+        progressDots.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(progressDots)
 
-        // Audio input indicator (built-in mic ↔ Bluetooth headset)
-        audioInputIndicator.contentMode = .scaleAspectFit
-        audioInputIndicator.tintColor = lookAndFeel.color
-        audioInputIndicator.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(audioInputIndicator)
-
-        //combo Gauge
+        // Streak funnel gauge
         comboGauge.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(comboGauge)
 
+        // Circular buttons
+        microphoneButton = makeCircleButton(icon: "mic.fill", action: #selector(toggleMute))
+        pauseButton = makeCircleButton(icon: "pause.fill", action: #selector(togglePause))
+        parentView.addSubview(microphoneButton)
+        parentView.addSubview(pauseButton)
 
-        // Constraints
+        // "Nice!" overlay (top-most)
+        niceOverlay.translatesAutoresizingMaskIntoConstraints = false
+        niceOverlay.alpha = 0
+        parentView.addSubview(niceOverlay)
+        
+        missedOverlay.translatesAutoresizingMaskIntoConstraints = false
+        missedOverlay.alpha = 0
+        parentView.addSubview(missedOverlay)
+
+        let guide = parentView.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            timerLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 20),
-            timerLabel.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 20),
-            
-            scoreLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 20),
-            scoreLabel.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
+            // Fire spans the full width along the bottom.
+            fireBorder.leadingAnchor.constraint(equalTo: parentView.leadingAnchor),
+            fireBorder.trailingAnchor.constraint(equalTo: parentView.trailingAnchor),
+            fireBorder.bottomAnchor.constraint(equalTo: parentView.bottomAnchor),
+            fireBorder.heightAnchor.constraint(equalToConstant: 340),
 
-            feedbackLabel.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-            feedbackLabel.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor, constant: 100),
+            // Progress dots across the top.
+            progressDots.topAnchor.constraint(equalTo: guide.topAnchor, constant: 14),
+            progressDots.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 28),
+            progressDots.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -28),
+            progressDots.heightAnchor.constraint(equalToConstant: 16),
 
-            pauseButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
-            
-            microphoneButton.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            microphoneButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: lookAndFeel.buttonSize + 15),
-            
-            audioInputIndicator.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
-            audioInputIndicator.topAnchor.constraint(equalTo: scoreLabel.bottomAnchor, constant: 12),
-            audioInputIndicator.widthAnchor.constraint(equalToConstant: 30),
-            audioInputIndicator.heightAnchor.constraint(equalToConstant: 30),
+            // Streak funnel, bottom-left.
+            comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 10),
+            comboGauge.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -100),
+            comboGauge.widthAnchor.constraint(equalToConstant: 220),
+            comboGauge.heightAnchor.constraint(equalToConstant: 210),
 
-            comboGauge.widthAnchor.constraint(equalToConstant: 120),
-            comboGauge.heightAnchor.constraint(equalToConstant: 140),
-            comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 5),
-            comboGauge.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+            // Buttons, bottom-right.
+            pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
+            pauseButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -120),
+            pauseButton.widthAnchor.constraint(equalToConstant: buttonDiameter),
+            pauseButton.heightAnchor.constraint(equalToConstant: buttonDiameter),
+
+            microphoneButton.trailingAnchor.constraint(equalTo: pauseButton.leadingAnchor, constant: -16),
+            microphoneButton.centerYAnchor.constraint(equalTo: pauseButton.centerYAnchor),
+            microphoneButton.widthAnchor.constraint(equalToConstant: buttonDiameter),
+            microphoneButton.heightAnchor.constraint(equalToConstant: buttonDiameter),
+
+            // "Nice!" overlay, upper-centre.
+            niceOverlay.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+            niceOverlay.centerYAnchor.constraint(equalTo: parentView.centerYAnchor, constant: -75),
+            niceOverlay.widthAnchor.constraint(equalToConstant: 150),
+            niceOverlay.heightAnchor.constraint(equalToConstant: 150),
+            
+           missedOverlay.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+           missedOverlay.centerYAnchor.constraint(equalTo: parentView.centerYAnchor, constant: -75),
+           missedOverlay.widthAnchor.constraint(equalToConstant: 150),
+           missedOverlay.heightAnchor.constraint(equalToConstant: 150),
+
         ])
-        UIView.animate(
-                withDuration: 1,
-                delay: 0,
-                options: .curveEaseOut,
-                animations: {
-                    self.pauseButton.transform = CGAffineTransform(translationX: -self.lookAndFeel.buttonSize - 20, y: 0)
-                    self.microphoneButton.transform = CGAffineTransform(translationX: -self.lookAndFeel.buttonSize - 70, y: 0)
-                    
-            })
+
+        fireBorder.start()
     }
-    
+
+    // MARK: Controls
     @objc func toggleMute() {
         guard let speechRecognition = speechRecognition else { return }
-        
-        var iconName = "microphone.slash.circle.fill"
+        var iconName = "mic.slash.fill"
         if microphoneState == .unmuted {
             microphoneState = .muted
-            Task { @MainActor in
-                speechRecognition.stop()
-            }
+            Task { @MainActor in speechRecognition.stop() }
         } else {
             microphoneState = .unmuted
-            iconName = "microphone.circle.fill"
+            iconName = "mic.fill"
             Task { @MainActor in
-                do {
-                    try await speechRecognition.startRecording()
-                } catch {
-                    print("Cannot start recording: \(error.localizedDescription)")
-                }
+                do { try await speechRecognition.startRecording() }
+                catch { print("Cannot start recording: \(error.localizedDescription)") }
             }
         }
-        let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
-        let image = UIImage(systemName: iconName, withConfiguration: config)
-        microphoneButton.setImage(image, for: .normal)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
+        microphoneButton.setImage(UIImage(systemName: iconName, withConfiguration: config), for: .normal)
     }
-    
+
     @objc func togglePause() {
         var state = gameState.CurrentState
-        var iconName = "pause.circle.fill"
+        var iconName = "pause.fill"
         if state == .running {
             state = .pause
-            iconName = "play.circle.fill"
+            iconName = "play.fill"
             gameState.Timer.pause()
-            Task { @MainActor in
-                speechRecognition?.pause()
-            }
+            Task { @MainActor in speechRecognition?.pause() }
         } else if state == .pause {
             state = .running
             gameState.Timer.resume()
             Task { @MainActor in
-                do {
-                    try speechRecognition?.resume()
-                } catch {
-                    logger.error("Failed to resume speech recognition: \(error.localizedDescription)")
-                }
+                do { try speechRecognition?.resume() }
+                catch { logger.error("Failed to resume speech recognition: \(error.localizedDescription)") }
             }
         }
         gameState.CurrentState = state
-        let config = UIImage.SymbolConfiguration(pointSize: lookAndFeel.buttonSize, weight: .regular)
-        let image = UIImage(systemName: iconName, withConfiguration: config)
-        pauseButton.setImage(image, for: .normal)
-    }
-    
-    func updateTimerDisplay(gameElapsedTime: Double) {
-        levelRemainingTime =  gameState.LevelDuration - gameElapsedTime
-        let minutes = Int(levelRemainingTime / 60)
-        let seconds = Int(levelRemainingTime) % 60
-        let formattedTimerString = String(format: "%02d:%02d", minutes, seconds)
-        timerLabel.text = formattedTimerString
-    }
-    
-    func updateHudScore(score: Int) {
-        let formattedString = String(format: "%03d", gameState.Score)
-        scoreLabel.text = formattedString
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
+        pauseButton.setImage(UIImage(systemName: iconName, withConfiguration: config), for: .normal)
     }
 
-    //TODO: Rename this to increment streak
+    // MARK: Updates
+    func updateTimerDisplay(gameElapsedTime: Double) {
+        levelRemainingTime = gameState.LevelDuration - gameElapsedTime
+        let minutes = Int(levelRemainingTime / 60)
+        let seconds = Int(levelRemainingTime) % 60
+        timerLabel.text = String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    func updateHudScore(score: Int) {
+        scoreLabel.text = String(format: "%03d", gameState.Score)
+        comboGauge.updateScore(gameState.Score)
+    }
+
+    /// Update the top progress row. `filled` completed of `total` prompts.
+    func updateProgress(filled: Int, total: Int) {
+        progressDots.setTotal(total)
+        progressDots.setProgress(filled: filled)
+    }
+
+    /// Play the "+N" flourish for the points a correct answer earned.
+    func showScoreGain(_ amount: Int) {
+        comboGauge.emitScoreGain(amount)
+    }
+
+    //TODO: Rename this to incrementStreak
     func incrementCombo(_ value: Int) {
         comboGauge.incrementCombo(value: value)
+        // fireBorder.setStreak(value, maxStreak: gameState.MaxStreak)
+    }
+
+    func showCorrectFeedback() {
+        niceOverlay.play()
     }
     
-    func showCorrectFeedback() {
-        feedbackLabel.layer.removeAllAnimations()
-        feedbackLabel.alpha = 0
-        feedbackLabel.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
-        UIView.animate(withDuration: 0.18, delay: 0, options: .curveEaseOut, animations: {
-            self.feedbackLabel.alpha = 1
-            self.feedbackLabel.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
-        }, completion: { _ in
-            UIView.animate(withDuration: 0.12, animations: {
-                self.feedbackLabel.transform = .identity
-            }, completion: { _ in
-                UIView.animate(withDuration: 0.4, delay: 0.45, options: .curveEaseIn, animations: {
-                    self.feedbackLabel.alpha = 0
-                })
-            })
-        })
+    func showIncorrectFeedback() {
+        missedOverlay.play()
     }
 }

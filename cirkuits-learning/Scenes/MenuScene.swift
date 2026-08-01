@@ -14,21 +14,13 @@ private enum MenuPalette {
     static let yellow = Color(red: 0.97, green: 0.80, blue: 0.30)
 }
 
-// MARK: - Asset loading
+// MARK: - Audio input bridge
 
-/// Loads a screen asset PNG. The artwork ships as loose PNGs (not an asset
-/// catalog), which SwiftUI's `Image(_:)` cannot resolve — so look the image
-/// up by name and fall back to a direct bundle path.
-private func menuAsset(_ name: String) -> Image {
-    if let image = UIImage(named: name) ?? bundlePNG(name) {
-        return Image(uiImage: image)
-    }
-    return Image(systemName: "exclamationmark.triangle")
-}
-
-private func bundlePNG(_ name: String) -> UIImage? {
-    guard let path = Bundle.main.path(forResource: name, ofType: "png") else { return nil }
-    return UIImage(contentsOfFile: path)
+/// Publishes the active audio input to SwiftUI. Detection itself lives in
+/// `SpeechRecognizer` (`currentInputType` / `onAudioInputChange`); this only
+/// carries that value into the menu view.
+final class MenuAudioInputModel: ObservableObject {
+    @Published var inputType: AudioInputType = .builtIn
 }
 
 // MARK: - Scrolling "IGNITER///" ticker
@@ -41,8 +33,8 @@ private struct MenuTicker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            menuAsset("Igniter_BGP3").resizable().scaledToFit().frame(width: width)
-            menuAsset("Igniter_BGP3").resizable().scaledToFit().frame(width: width)
+            Image(screenAsset: "Igniter_BGP3").resizable().scaledToFit().frame(width: width)
+            Image(screenAsset: "Igniter_BGP3").resizable().scaledToFit().frame(width: width)
         }
         .offset(x: offset)
         .frame(width: width, alignment: .leading)
@@ -69,11 +61,11 @@ private struct BottomDecoration: View {
     var body: some View {
         let bandHeight = width / bandAspect
         ZStack(alignment: .bottom) {
-            menuAsset("Igniter_BGP1")
+            Image(screenAsset: "Igniter_BGP1")
                 .resizable().scaledToFit().frame(width: width)
 //                .offset(y: -bandHeight * 0.5)
 
-            menuAsset("Igniter_BGP2")
+            Image(screenAsset: "Igniter_BGP2")
                 .resizable().scaledToFit().frame(width: width)
 //                .offset(y: -bandHeight * 0.6)
             
@@ -90,6 +82,9 @@ struct MenuView: View {
     /// Invoked when the player taps Play — advances to the countdown.
     let onPlay: () -> Void
 
+    /// Which microphone will capture the player's voice.
+    @ObservedObject var audioInput: MenuAudioInputModel
+
     @State private var appeared = false
     @State private var flameBreath = false
     @State private var wavePulse = false
@@ -103,7 +98,7 @@ struct MenuView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                menuAsset("IgniterCBG")
+                Image(screenAsset: "IgniterCBG")
                     .resizable()
                     .scaledToFill()
                     .frame(width: geo.size.width, height: geo.size.height)
@@ -114,6 +109,7 @@ struct MenuView: View {
                     flameSection
                     logo
                     Spacer()
+                    audioInputBadge
                     playRow
                     Spacer().frame(height: 20)
                     secondaryButtons
@@ -140,7 +136,7 @@ struct MenuView: View {
             ripple(rightSide: true,  color: MenuPalette.pink,   delay: 0.6)
             //ripple(rightSide: true,  color: MenuPalette.yellow, delay: 1.5)
 
-            menuAsset("Igniter_IMG")
+            Image(screenAsset: "Igniter_IMG")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 96)
@@ -170,7 +166,7 @@ struct MenuView: View {
     // MARK: Logo
 
     private var logo: some View {
-        menuAsset("Igniter_Logo")
+        Image(screenAsset: "Igniter_Logo")
             .resizable()
             .scaledToFit()
             .frame(width: 264)
@@ -178,24 +174,45 @@ struct MenuView: View {
             .opacity(appeared ? 1 : 0)
     }
 
+    // MARK: Audio input indicator
+
+    /// Tells the player which microphone will capture their voice — the
+    /// built-in mic or an attached Bluetooth/wired headset.
+    private var audioInputBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: audioInput.inputType.iconName)
+                .font(.system(size: 15, weight: .bold))
+            Text(audioInput.inputType.displayName)
+                .font(.jaro(15))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(Color.black.opacity(0.28)))
+        .overlay(Capsule().stroke(MenuPalette.yellow.opacity(0.9), lineWidth: 2))
+        .scaleEffect(appeared ? 1 : 0.6)
+        .opacity(appeared ? 1 : 0)
+        .animation(.easeInOut(duration: 0.3), value: audioInput.inputType)
+    }
+
     // MARK: Play button + arrows
 
     private var playRow: some View {
         HStack(spacing: 50) {
             // Arrows are decorative for now — there is no stage selection yet.
-            menuAsset("Igniter_LeftArrow")
+            Image(screenAsset: "Igniter_LeftArrow")
                 .resizable().scaledToFit().frame(width: 38)
                .offset(x: arrowNudge ? -7 : 0)
                 .animation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true),
                            value: arrowNudge)
 
             Button(action: triggerPlay) {
-                menuAsset("Igniter_Play")
+                Image(screenAsset: "Igniter_Play")
                     .resizable().scaledToFit().frame(width: 150)
             }
             .buttonStyle(.plain)
 
-            menuAsset("Igniter_RightArrow")
+            Image(screenAsset: "Igniter_RightArrow")
                 .resizable().scaledToFit().frame(width: 38)
                 .offset(x: arrowNudge ? 7 : 0)
                 .animation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true),
@@ -228,7 +245,7 @@ struct MenuView: View {
                 pressed.wrappedValue = false
             }
         } label: {
-            menuAsset(image).resizable().scaledToFit().frame(width: 62)
+            Image(screenAsset: image).resizable().scaledToFit().frame(width: 62)
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed.wrappedValue ? 0.85 : 1.0)
@@ -271,11 +288,19 @@ private extension UIView {
     }
 }
 
+@MainActor
 class MenuScene: SceneProtocol {
     private var hostingController: UIHostingController<MenuView>?
 
+    /// Reused purely to detect (not record) which audio input is active, so the
+    /// menu can show the player whether their built-in mic or a headset is used.
+    private let speechRecognizer: SpeechRecognizer
+    private let audioInputModel = MenuAudioInputModel()
+
     init(parentView: UIView, gameState: GameState, requestScene: @escaping (GameScenes) -> Void) {
-        let menu = MenuView(onPlay: { requestScene(.CountDown) })
+        self.speechRecognizer = SpeechRecognizer(taskHint: .confirmation)
+
+        let menu = MenuView(onPlay: { requestScene(.CountDown) }, audioInput: audioInputModel)
         let hosting = UIHostingController(rootView: menu)
         hosting.view.backgroundColor = .clear
         hosting.view.translatesAutoresizingMaskIntoConstraints = false
@@ -294,6 +319,13 @@ class MenuScene: SceneProtocol {
         hosting.didMove(toParent: parentVC)
 
         self.hostingController = hosting
+
+        // Report the active input now, and keep it live as the player plugs in
+        // or removes a headset while sitting on the menu.
+        speechRecognizer.onAudioInputChange = { [weak audioInputModel] inputType in
+            audioInputModel?.inputType = inputType
+        }
+        speechRecognizer.refreshAudioInput()
     }
 
     func handlePinchGesture(gesture: UIPinchGestureRecognizer) {}

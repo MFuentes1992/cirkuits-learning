@@ -23,6 +23,8 @@ class IgniterScene: SceneProtocol {
     private var streakChain: Int
     private var currentAnswerWindow: Double
     private var wordStartSec: Double
+    private var checkMarkTime: Double
+    private var switchTime: Double
     private var gameState: GameState!
     private var hud: IgniterHUD
     private var WordFoos = [WordFoo]()
@@ -33,10 +35,29 @@ class IgniterScene: SceneProtocol {
     
     // -- Local Game Track
     private var score: Double = 0
-    private var combo: Int = 0
+
+    /// Score multiplier by number of completed streaks. Each streak of
+    /// `GameState.StreakGoal` consecutive correct answers moves the player one
+    /// tier up; a wrong answer drops them back to the first. Capped so a long
+    /// perfect run can't run away with the scoreboard.
+    private static let streakMultipliers: [Double] = [1.0, 1.5, 2.0, 2.5, 3.0]
+
+    /// Multiplier applied to the reward for the word being scored right now.
+    ///
+    /// Reads the streak count *before* the current answer is folded in, so a
+    /// completed streak raises the multiplier for the words that follow it
+    /// rather than retroactively paying out the streak that earned it.
+    private var scoreMultiplier: Double {
+        Self.streakMultipliers[min(streakChain, Self.streakMultipliers.count - 1)]
+    }
 
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
+
+    // Official Igniter backdrop. Sits behind the transparent Metal view (in the
+    // root view, above the shared SwirlPatternView) so the 3D letters render on
+    // top of it. Removed on teardown so other scenes keep the shared background.
+    private weak var backgroundView: UIImageView?
     
     let wordBank: [String] = [
         "I", "am",
@@ -71,6 +92,8 @@ class IgniterScene: SceneProtocol {
         self.gameElapsedTime = 0
         self.wordStartSec = 0
         self.streakChain = 0
+        self.checkMarkTime = 0
+        self.switchTime = 0
         self.spRecTaskHint = .confirmation
         self.speechRecognition = SpeechRecognizer(taskHint: spRecTaskHint)
         
@@ -115,6 +138,7 @@ class IgniterScene: SceneProtocol {
     }
     
     func buildInitialScene(view: MTKView) {
+        installBackground(view: view)
         cameraSettings = CameraSettings(
             eye: SIMD3<Float>(0,0,100),
             center: SIMD3<Float>(0,0,0),
@@ -134,6 +158,22 @@ class IgniterScene: SceneProtocol {
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
     }
     
+    /// Places the official Igniter backdrop directly beneath the transparent
+    /// Metal view, so the 3D letters render on top of it.
+    private func installBackground(view: MTKView) {
+        guard let container = view.superview else { return }
+        let imageView = ScreenAsset.backgroundView(ScreenAsset.igniterBackground,
+                                                   frame: container.bounds)
+        container.insertSubview(imageView, belowSubview: view)
+        backgroundView = imageView
+    }
+
+    deinit {
+        // Scene teardown only clears the Metal view's subviews; our backdrop
+        // lives in the root view, so remove it explicitly.
+        backgroundView?.removeFromSuperview()
+    }
+
     func play() {}
     
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {
@@ -152,7 +192,15 @@ class IgniterScene: SceneProtocol {
     }
     
     func nextFoo(reward: Int) {
-        score += Double(reward)
+        let earned = Double(reward) * scoreMultiplier
+        if reward > 0 {
+            logger.info("""
+                Scored \(reward) x\(self.scoreMultiplier, format: .fixed(precision: 1)) \
+                = \(earned, format: .fixed(precision: 1)) (streak \(self.streakChain))
+                """)
+            hud.showScoreGain(Int(earned.rounded()))
+        }
+        score += earned
         currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
         gameState.AnswersBucket = []
@@ -180,12 +228,9 @@ class IgniterScene: SceneProtocol {
                 timeToAnswer = gameState.Timer.getElapsedTime() - wordStartSec
                 //  -- No updates on elapsed time
                 if timeToAnswer >= gameState.WordTimeToAnswer {
-                    timeToAnswer = 0
-                    nextFoo(reward: 0)
-                    streakChain = 0
-                    hud.incrementCombo(streakChain)
-                    gameState.PlayerState = .Idle
-                    wordStartSec = gameState.Timer.getElapsedTime()
+                    hud.showIncorrectFeedback()
+                    gameState.PlayerState = .Wrong
+                    switchTime = gameState.Timer.getElapsedTime()
                 }
                 
                 // --- Evaluate if correct answer
@@ -196,26 +241,44 @@ class IgniterScene: SceneProtocol {
                 let isCorrect = answer == goal
                 logger.info("Is correct: \(isCorrect)")
                 
-                if isCorrect {
+                if isCorrect && gameState.PlayerState != .Wrong{
+                    hud.showCorrectFeedback()
+                    gameState.PlayerState = .Correct
+                    checkMarkTime = gameState.Timer.getElapsedTime()
+                }
+            case .Correct:
+                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
+                if gameState.Timer.getElapsedTime() - checkMarkTime >= 1.1 {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
-                    streakChain += 1
+                    gameState.Combo = gameState.Combo + 1
+                    hud.incrementCombo(gameState.Combo)
+                    wordStartSec = gameState.Timer.getElapsedTime()
+                    speechRecognition.pause()
+                }
+            case .Wrong:
+                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
+                if gameState.Timer.getElapsedTime() - switchTime >= 1.1 {
+                    nextFoo(reward: 0)
+                    resetTimers()
+                    streakChain = 0
+                    gameState.Combo = 0
                     hud.incrementCombo(streakChain)
                     wordStartSec = gameState.Timer.getElapsedTime()
-                    hud.showCorrectFeedback()
+                    gameState.PlayerState = .Idle
                 }
             case .Idle:
                 let wordElapsedSec = gameState.Timer.getElapsedTime() - wordStartSec
                 gameElapsedTime = gameState.Timer.getElapsedTime()
+                try? speechRecognition.resume()
                 if wordElapsedSec > gameState.WordTimeToLive {
-                    nextFoo(reward: 0)
-                    resetTimers()
-                    streakChain = 0
-                    hud.incrementCombo(streakChain)
-                    wordStartSec = gameState.Timer.getElapsedTime()
+                    switchTime = gameState.Timer.getElapsedTime()
+                    hud.showIncorrectFeedback()
+                    gameState.PlayerState = .Wrong
                 }
             }
+            // -- General updating operations ------
             if  gameElapsedTime >= gameState.LevelDuration {
                 gameState.HighScore = gameState.Score
                 speechRecognition.stop()
@@ -226,20 +289,15 @@ class IgniterScene: SceneProtocol {
             }
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
-            if streakChain == gameState.MaxStreak  {
-                if gameState.Combo == 3 {
-                    score *= 2.2
-                    gameState.Combo = 0
-                } else {
-                    score *= 1.5
-                }
-                streakChain = 0
-                gameState.Combo = gameState.Combo + 1
+            hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
+            gameState.MaxStreak = gameState.Combo
+            if gameState.Combo == gameState.StreakGoal  {
+                streakChain = streakChain + 1
+                gameState.Combo = 0
             }
-            
             gameState.Score = Int(score)
-            gameState.Streak = streakChain
         }
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
 }
+
