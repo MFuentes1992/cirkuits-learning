@@ -52,6 +52,26 @@ class WordLayoutManager {
     func getLetters() -> [Letter] {
         return lettersOnStage
     }
+
+    /// World-space centre of the letters currently on stage — the layout
+    /// translation applied to each glyph's own bounding box. Empty stage
+    /// returns the origin.
+    var wordCenter: SIMD3<Float> {
+        let placed = lettersOnStage.filter { $0.mesh != nil }
+        guard !placed.isEmpty else { return .zero }
+
+        var minX = Float.greatestFiniteMagnitude, maxX = -Float.greatestFiniteMagnitude
+        var minY = Float.greatestFiniteMagnitude, maxY = -Float.greatestFiniteMagnitude
+        for letter in placed {
+            let offsetX = letter.transform.columns.3.x
+            let offsetY = letter.transform.columns.3.y
+            minX = min(minX, letter.bbLeftX + offsetX)
+            maxX = max(maxX, letter.bbRightX + offsetX)
+            minY = min(minY, letter.bbBottomY + offsetY)
+            maxY = max(maxY, letter.bbTopY + offsetY)
+        }
+        return SIMD3<Float>((minX + maxX) / 2, (minY + maxY) / 2, 0)
+    }
     
     func getLetterTransforms() -> [simd_float4x4] {
         return lettersOnStage.map { $0.transform }

@@ -11,4 +11,8 @@ struct Uniforms {
     var projectionMatrix: simd_float4x4
     var viewMatrix: simd_float4x4
     var modelMatrix: simd_float4x4
+    /// Inverse-transpose of `modelMatrix`, for carrying normals into world
+    /// space. Field order must stay in step with the `Uniforms` struct in
+    /// `Shader_Obj.metal`.
+    var normalMatrix: simd_float4x4
 }

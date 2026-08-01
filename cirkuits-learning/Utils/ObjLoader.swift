@@ -7,10 +7,12 @@
 import MetalKit
 
 class ObjLoader {
-    static func loadMesh(content: String, device: MTLDevice) -> (Mesh, minX: Float, maxX: Float) {
+    static func loadMesh(content: String, device: MTLDevice) -> (Mesh, minX: Float, maxX: Float, minY: Float, maxY: Float) {
         var minX: Float = .greatestFiniteMagnitude
         var maxX: Float = -.greatestFiniteMagnitude
-        
+        var minY: Float = .greatestFiniteMagnitude
+        var maxY: Float = -.greatestFiniteMagnitude
+
         var positions: [SIMD3<Float>] = []
         var normals: [SIMD3<Float>] = []
         var indices: [UInt16] = []
@@ -34,6 +36,12 @@ class ObjLoader {
                 if x > maxX {
                     maxX = x
                 }
+                if y < minY {
+                    minY = y
+                }
+                if y > maxY {
+                    maxY = y
+                }
             case "vn":
                 let x = Float(tokens[1])!
                 let y = Float(tokens[2])!
@@ -41,9 +49,18 @@ class ObjLoader {
                 normals.append(SIMD3<Float>(x, y, z))
             case "f":
                 for i in 1..<tokens.count {
-                    let part = tokens[i].replacingOccurrences(of: "\t", with: "", options: NSString.CompareOptions.literal, range: nil)
-                    let vertexIndex = UInt16(part)! - 1
-                    indices.append(vertexIndex)
+                    // A face vertex is `v`, `v/vt`, `v//vn` or `v/vt/vn`.
+                    // Positions and normals are paired by file order below, not
+                    // by the face's own indices, so only the leading position
+                    // index is meaningful — take everything before the first
+                    // slash and ignore the rest.
+                    let part = tokens[i]
+                        .replacingOccurrences(of: "\t", with: "", options: .literal, range: nil)
+                        .prefix { $0 != "/" }
+                    guard let vertexIndex = UInt16(part), vertexIndex > 0 else {
+                        fatalError("Unparseable OBJ face index '\(tokens[i])'")
+                    }
+                    indices.append(vertexIndex - 1)
                 }
             default:
                 break
@@ -67,7 +84,7 @@ class ObjLoader {
 
         return (Mesh(vertexBuffer: vertexBuffer!,
                     indexBuffer: indexBuffer!,
-                    indexCount: indices.count), minX, maxX)
+                    indexCount: indices.count), minX, maxX, minY, maxY)
     }
     
     

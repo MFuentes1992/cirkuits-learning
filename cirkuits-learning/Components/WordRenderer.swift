@@ -23,7 +23,19 @@ class WordRenderer {
         }
     }
     private var uniformBuffer: MTLBuffer?
-        
+
+    /// Optional per-letter override applied on top of the layout transform at
+    /// draw time. Receives the letter's index, the letter itself and its layout
+    /// matrix, and returns the matrix to draw with.
+    ///
+    /// Lets a scene animate letters without the layout manager knowing about it
+    /// — nil in the game, set by the sandbox for its exit animation.
+    var letterTransformModifier: ((Int, Letter, simd_float4x4) -> simd_float4x4)?
+
+    /// World-space centre of the word currently on stage, for framing a camera.
+    var wordCenter: SIMD3<Float> { layoutManager.wordCenter }
+
+
     init(device: MTLDevice,
          screenWidth: Float) {
         self.device = device
@@ -54,13 +66,22 @@ class WordRenderer {
         encoder.setRenderPipelineState(pipelineState)
         guard let uniformBuffer = uniformBuffer else { return }
         
+        let letters = layoutManager.getLetters()
         let transforms = layoutManager.getLetterTransforms()
         let uniformsPointer = uniformBuffer.contents().bindMemory(to: Uniforms.self, capacity: transforms.count)
         for(index, transform) in transforms.enumerated() {
+            var modelMatrix = transform
+            if let modifier = letterTransformModifier, index < letters.count {
+                modelMatrix = modifier(index, letters[index], transform)
+            }
             uniformsPointer[index] = Uniforms(
                 projectionMatrix:projectionMatrix,
                 viewMatrix: viewMatrix,
-                modelMatrix: transform
+                modelMatrix: modelMatrix,
+                // Normals don't survive a model matrix the way positions do —
+                // they need its inverse-transpose. Identity-equivalent while a
+                // letter is only translated, but essential once one rotates.
+                normalMatrix: simd_transpose(simd_inverse(modelMatrix))
             )
         }
             
