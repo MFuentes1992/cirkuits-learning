@@ -44,7 +44,7 @@ class IgniterHUD {
         self.scoreLabel = UILabel()
         self.progressDots = ProgressDotsView(total: 8)
         self.comboGauge = ComboGauge(frame: CGRect(x: 0, y: 0, width: 220, height: 210),
-                                     maxCombo: MaxStreak)
+                                     totalBars: gameState.StreakGoal)
         self.niceOverlay = NiceCheckmarkView()
         self.missedOverlay = MissedWordView()
         self.fireBorder = FireBorderView()

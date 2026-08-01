@@ -66,7 +66,7 @@ class SceneManager {
         self.gameState.Lives = levelConfig.lives
         self.gameState.CountDown = Double(levelConfig.levelCountDown)
         self.gameState.Stage = levelConfig.stage
-        self.gameState.StreakGoal = 5
+        self.gameState.StreakGoal = 3
         self.gameState.ConfigLoaded = true
         currentScene.play()
     }

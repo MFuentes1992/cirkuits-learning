@@ -12,8 +12,7 @@ import UIKit
 class ComboGauge: UIView {
 
     // MARK: Config
-    private let barCount = 5                 // design always shows five segments
-    private var maxCombo = 5
+    private var barCount: Int = 0
 
     // MARK: Layout constants (points, in local space)
     private let leftX: CGFloat = 22
@@ -39,8 +38,8 @@ class ComboGauge: UIView {
     private let streakLabel = UILabel()
 
     // MARK: Init
-    init(frame: CGRect, maxCombo: Int) {
-        self.maxCombo = maxCombo
+    init(frame: CGRect, totalBars: Int = 5) {
+        self.barCount = totalBars // Design always shows 5 elements
         super.init(frame: frame)
         setupGauge()
     }
