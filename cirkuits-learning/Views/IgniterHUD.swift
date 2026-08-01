@@ -221,7 +221,7 @@ class IgniterHUD {
     //TODO: Rename this to incrementStreak
     func incrementCombo(_ value: Int) {
         comboGauge.incrementCombo(value: value)
-        // fireBorder.setStreak(value, maxStreak: gameState.MaxStreak)
+        fireBorder.setStreak(value, maxStreak: gameState.StreakGoal)
     }
 
     func showCorrectFeedback() {
