@@ -158,7 +158,7 @@ class GameOverScene: SceneProtocol {
             // and make the number jump on arrival at this screen.
             score: gameState.Score,
             highScore: gameState.HighScore,
-            maxStreak: gameState.MaxStreak,
+            maxStreak: gameState.MaxStreak * gameState.StreakGoal,
             onRetry: { requestScene(.CountDown) },
             onExit: { exit(0) }
         )

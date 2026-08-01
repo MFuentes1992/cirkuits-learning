@@ -290,12 +290,12 @@ class IgniterScene: SceneProtocol {
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
             hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
-            gameState.MaxStreak = gameState.Combo
             if gameState.Combo == gameState.StreakGoal  {
                 streakChain = streakChain + 1
                 gameState.Combo = 0
             }
             gameState.Score = Int(score)
+            gameState.MaxStreak = streakChain
         }
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
