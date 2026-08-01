@@ -59,14 +59,14 @@ class SceneManager {
                                 })
         }
         currentScene = tmp
-        let levelConfig = LevelConfig(timeToLive: 2.5, timeToAnswer: 2.5, levelDuration: 60, lives: 3, levelCountDown: 3, stage: 1)
+        let levelConfig = LevelConfig(timeToLive: 2.5, timeToAnswer: 2.5, levelDuration: 30, lives: 3, levelCountDown: 3, stage: 1)
         self.gameState.WordTimeToLive = levelConfig.timeToLive
         self.gameState.WordTimeToAnswer = levelConfig.timeToAnswer
         self.gameState.LevelDuration = levelConfig.levelDuration
         self.gameState.Lives = levelConfig.lives
         self.gameState.CountDown = Double(levelConfig.levelCountDown)
         self.gameState.Stage = levelConfig.stage
-        self.gameState.StreakGoal = 4
+        self.gameState.StreakGoal = 5
         self.gameState.ConfigLoaded = true
         currentScene.play()
     }

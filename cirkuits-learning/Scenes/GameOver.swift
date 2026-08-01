@@ -152,7 +152,11 @@ class GameOverScene: SceneProtocol {
 
     init(parentView: UIView, gameState: GameState, requestScene: @escaping (GameScenes) -> Void) {
         let view = GameOverView(
-            score: gameState.MaxStreak <= 0 ? gameState.Score : gameState.Score + (gameState.MaxStreak),
+            // Streaks are already paid out during play via the score multiplier
+            // (see `IgniterScene.scoreMultiplier`), so the final score is shown
+            // as-is. Adding MaxStreak here on top would double-count the streak
+            // and make the number jump on arrival at this screen.
+            score: gameState.Score,
             highScore: gameState.HighScore,
             maxStreak: gameState.MaxStreak,
             onRetry: { requestScene(.CountDown) },
@@ -169,6 +173,7 @@ class GameOverScene: SceneProtocol {
             hostingController.view.trailingAnchor.constraint(equalTo: parentView.trailingAnchor),
         ])
         self.hostingView = hostingController.view
+        print("Maxstreak \(gameState.MaxStreak)")
     }
 
     func handlePanGesture(gesture: UIPanGestureRecognizer, location: CGPoint) {}

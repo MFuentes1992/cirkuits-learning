@@ -218,6 +218,70 @@ class ComboGauge: UIView {
         layer.add(a, forKey: "pulse")
     }
 
+    // MARK: Score gain popper
+
+    /// Floats a "+N" up out of the mouth of the funnel and fades it away.
+    ///
+    /// Called for each correct answer with the points that answer actually
+    /// earned, so the streak multiplier is visible in the moment it pays out.
+    /// It emits from the top bar and borrows that bar's magenta.
+    ///
+    /// The label travels past the top of the gauge, so nothing in the HUD
+    /// hierarchy may clip it. `clipsToBounds` is false by default on `UIView`
+    /// and is left that way here and on the gauge's parent.
+    var scoreColors = [
+        0: IgniterPalette.streakMagenta,
+        1: IgniterPalette.streakBlue,
+        2: IgniterPalette.streakLime,
+        3: IgniterPalette.bracketYellow,
+        4: IgniterPalette.fireAmber
+    ]
+    func emitScoreGain(_ amount: Int) {
+        let randColor = Int.random(in: 0...4)
+        let label = UILabel()
+        label.text = "+\(amount)"
+        label.font = AppFont.uiFont(size: 42)
+        label.textColor = scoreColors[randColor]
+        label.textAlignment = .center
+        // Keeps the glyph readable where it crosses the pale funnel bars.
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 3
+        label.layer.shadowOpacity = 0.45
+        label.sizeToFit()
+
+        // Centre of the top bar, so it appears to burst out of that segment.
+        let start = CGPoint(x: leftX + barWidth(0) / 2, y: topY + barHeight / 2)
+        label.center = start
+        label.alpha = 0
+        label.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        addSubview(label)
+
+        // One keyframe pass so the rise, the pop and the fade can overlap
+        // without separate animations fighting over `alpha`.
+        UIView.animateKeyframes(withDuration: 1.15, delay: 0) {
+            // Pop in and slightly overshoot...
+            UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 0.15) {
+                label.alpha = 1
+                label.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
+            }
+            // ...settle back to full size.
+            UIView.addKeyframe(withRelativeStartTime: 0.15, relativeDuration: 0.15) {
+                label.transform = .identity
+            }
+            // Drift upward for the whole duration.
+            UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 1) {
+                label.center = CGPoint(x: start.x, y: start.y - 64)
+            }
+            // Fade over the back half, so it's legible before it goes.
+            UIView.addKeyframe(withRelativeStartTime: 0.45, relativeDuration: 0.55) {
+                label.alpha = 0
+            }
+        } completion: { _ in
+            label.removeFromSuperview()
+        }
+    }
+
     // MARK: Public API
     func setCombo(_ value: Int) {
         combo = min(max(0, value), barCount)

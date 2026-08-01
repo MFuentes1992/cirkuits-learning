@@ -213,6 +213,11 @@ class IgniterHUD {
         progressDots.setProgress(filled: filled)
     }
 
+    /// Play the "+N" flourish for the points a correct answer earned.
+    func showScoreGain(_ amount: Int) {
+        comboGauge.emitScoreGain(amount)
+    }
+
     //TODO: Rename this to incrementStreak
     func incrementCombo(_ value: Int) {
         comboGauge.incrementCombo(value: value)

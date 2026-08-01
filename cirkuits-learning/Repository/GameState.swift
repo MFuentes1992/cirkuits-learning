@@ -137,6 +137,11 @@ class GameState {
         score = 0
         combo = 0
         streak = 0
+        // Per-run peak, so it has to clear between runs. `MaxStreak`'s setter
+        // only ever raises the value, so without this the previous run's best
+        // survives and every later run reports it instead of its own. Note
+        // `highScore` is deliberately *not* reset — that one is meant to persist.
+        maxStreak = 0
         capturedAnswer = ""
         isAnswering = false
         correctanswer = false

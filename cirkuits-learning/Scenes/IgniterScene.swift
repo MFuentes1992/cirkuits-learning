@@ -36,6 +36,21 @@ class IgniterScene: SceneProtocol {
     // -- Local Game Track
     private var score: Double = 0
 
+    /// Score multiplier by number of completed streaks. Each streak of
+    /// `GameState.StreakGoal` consecutive correct answers moves the player one
+    /// tier up; a wrong answer drops them back to the first. Capped so a long
+    /// perfect run can't run away with the scoreboard.
+    private static let streakMultipliers: [Double] = [1.0, 1.5, 2.0, 2.5, 3.0]
+
+    /// Multiplier applied to the reward for the word being scored right now.
+    ///
+    /// Reads the streak count *before* the current answer is folded in, so a
+    /// completed streak raises the multiplier for the words that follow it
+    /// rather than retroactively paying out the streak that earned it.
+    private var scoreMultiplier: Double {
+        Self.streakMultipliers[min(streakChain, Self.streakMultipliers.count - 1)]
+    }
+
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
 
@@ -177,7 +192,15 @@ class IgniterScene: SceneProtocol {
     }
     
     func nextFoo(reward: Int) {
-        score += Double(reward)
+        let earned = Double(reward) * scoreMultiplier
+        if reward > 0 {
+            logger.info("""
+                Scored \(reward) x\(self.scoreMultiplier, format: .fixed(precision: 1)) \
+                = \(earned, format: .fixed(precision: 1)) (streak \(self.streakChain))
+                """)
+            hud.showScoreGain(Int(earned.rounded()))
+        }
+        score += earned
         currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
         gameState.AnswersBucket = []
@@ -267,13 +290,12 @@ class IgniterScene: SceneProtocol {
             hud.updateTimerDisplay(gameElapsedTime: gameElapsedTime)
             hud.updateHudScore(score: Int(score))
             hud.updateProgress(filled: currentFooIndex, total: WordFoos.count)
+            gameState.MaxStreak = gameState.Combo
             if gameState.Combo == gameState.StreakGoal  {
                 streakChain = streakChain + 1
                 gameState.Combo = 0
             }
-            
             gameState.Score = Int(score)
-            gameState.MaxStreak = streakChain
         }
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
