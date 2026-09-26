@@ -13,7 +13,16 @@ class Letter {
     var margin: Float = 0
     var bbLeftX: Float = 0
     var bbRightX: Float = 0
+    var bbBottomY: Float = 0
+    var bbTopY: Float = 0
     var width: Float { return bbRightX - bbLeftX }
+    var height: Float { return bbTopY - bbBottomY }
+
+    /// Centre of the glyph in model space. Rotating about this makes a letter
+    /// spin in place instead of swinging around the layout origin.
+    var modelCenter: SIMD3<Float> {
+        SIMD3<Float>((bbLeftX + bbRightX) / 2, (bbBottomY + bbTopY) / 2, 0)
+    }
     var uniformBuffer: MTLBuffer!
     var transform: simd_float4x4 = matrix_identity_float4x4
 
@@ -30,6 +39,8 @@ class Letter {
         mesh = result.0
         bbLeftX = result.1
         bbRightX = result.2
+        bbBottomY = result.3
+        bbTopY = result.4
     }
     
     /// Creates a lightweight occurrence that shares the template's mesh
@@ -40,6 +51,8 @@ class Letter {
         self.margin = template.margin
         self.bbLeftX = template.bbLeftX
         self.bbRightX = template.bbRightX
+        self.bbBottomY = template.bbBottomY
+        self.bbTopY = template.bbTopY
         self.uniformBuffer = template.uniformBuffer
     }
 

@@ -23,12 +23,32 @@ class WordRenderer {
         }
     }
     private var uniformBuffer: MTLBuffer?
-        
-    init(device: MTLDevice,
-         screenWidth: Float) {
+
+    /// Optional per-letter override applied on top of the layout transform at
+    /// draw time. Receives the letter's index, the letter itself and its layout
+    /// matrix, and returns the matrix to draw with.
+    ///
+    /// Lets a scene animate letters without the layout manager knowing about it
+    /// — nil in the game, set by the sandbox for its exit animation.
+    var letterTransformModifier: ((Int, Letter, simd_float4x4) -> simd_float4x4)?
+
+    /// World-space centre of the word currently on stage, for framing a camera.
+    var wordCenter: SIMD3<Float> { layoutManager.wordCenter }
+
+    /// World-space bounds of the word currently on stage; nil when empty.
+    var wordBounds: (min: SIMD2<Float>, max: SIMD2<Float>)? { layoutManager.wordBounds }
+
+    /// How the next `CurrentFoo` is laid out.
+    var layoutMode: LayoutMode {
+        get { layoutManager.layoutMode }
+        set { layoutManager.layoutMode = newValue }
+    }
+
+
+    init(device: MTLDevice) {
         self.device = device
         
-        let config = WordLayoutConfig(screenWidth: screenWidth)
+        let config = WordLayoutConfig()
         self.layoutManager = WordLayoutManager(config: config, device: device)
         pipelineState = makeObjectRenderPipeline(device: device, vertexName: "obj_vertex_shader", fragmentName: "obj_fragment_shader")
         setupUniformBuffer()
@@ -39,10 +59,6 @@ class WordRenderer {
         uniformBuffer = device.makeBuffer(length: uniformsSize, options: [.storageModeShared])
     }
     
-    func update(deltaTime: Float) {
-        layoutManager.update(deltaTime: deltaTime)
-    }
-   
     func cleanUp() {
         layoutManager.cleanStageLetters()
     }
@@ -54,13 +70,22 @@ class WordRenderer {
         encoder.setRenderPipelineState(pipelineState)
         guard let uniformBuffer = uniformBuffer else { return }
         
+        let letters = layoutManager.getLetters()
         let transforms = layoutManager.getLetterTransforms()
         let uniformsPointer = uniformBuffer.contents().bindMemory(to: Uniforms.self, capacity: transforms.count)
         for(index, transform) in transforms.enumerated() {
+            var modelMatrix = transform
+            if let modifier = letterTransformModifier, index < letters.count {
+                modelMatrix = modifier(index, letters[index], transform)
+            }
             uniformsPointer[index] = Uniforms(
                 projectionMatrix:projectionMatrix,
                 viewMatrix: viewMatrix,
-                modelMatrix: transform
+                modelMatrix: modelMatrix,
+                // Normals don't survive a model matrix the way positions do —
+                // they need its inverse-transpose. Identity-equivalent while a
+                // letter is only translated, but essential once one rotates.
+                normalMatrix: simd_transpose(simd_inverse(modelMatrix))
             )
         }
             

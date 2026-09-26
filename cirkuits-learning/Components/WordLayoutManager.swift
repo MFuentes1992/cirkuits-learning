@@ -8,8 +8,10 @@ import MetalKit
 import simd
 
 enum LayoutMode {
-    case linear
-    case circular(radius: Float, totalAngle: Float)
+    /// Breaks at spaces so each line fits `maxWidth`, stacks the lines centred
+    /// on the origin, then scales the whole block down if a single word or the
+    /// stack still overflows `maxWidth` × `maxHeight` (world units).
+    case wrapped(maxWidth: Float, maxHeight: Float)
 }
 
 class WordLayoutManager {
@@ -17,14 +19,8 @@ class WordLayoutManager {
     private var lettersOnStage: [Letter] = []
     private var config: WordLayoutConfig
     private var device: MTLDevice!
-    private var currentLayoutMode: LayoutMode = .linear
-    private var slideDirection: Float = 1.0
-    private var layoutBondingBox: CGRect!
-    private var time: Float = 0.0
-    private var shouldAnimateLayout: Bool = false
-    private var acceleration: Float = 0.0
-    private var animationAmout: Float = 0.0
-
+    /// Applied on the next `setWord`.
+    var layoutMode: LayoutMode = .wrapped(maxWidth: .infinity, maxHeight: .infinity)
     
     init (config: WordLayoutConfig, device: MTLDevice) {
         self.config = config
@@ -46,82 +42,114 @@ class WordLayoutManager {
             // the cached mesh — so repeated letters don't overlap.
             lettersOnStage.append(Letter(copying: template))
         }
-        createLinearTransform(initialPositionX: 0.0, initialPositionY: 20)
+        switch layoutMode {
+        case .wrapped(let maxWidth, let maxHeight):
+            createWrappedTransform(maxWidth: maxWidth, maxHeight: maxHeight)
+        }
     }
     
     func getLetters() -> [Letter] {
         return lettersOnStage
     }
-    
+
+    /// World-space bounds of the letters currently on stage — each glyph's own
+    /// bounding box carried through its layout transform (translation and
+    /// scale). Nil when nothing is on stage.
+    var wordBounds: (min: SIMD2<Float>, max: SIMD2<Float>)? {
+        let placed = lettersOnStage.filter { $0.mesh != nil }
+        guard !placed.isEmpty else { return nil }
+
+        var low = SIMD2<Float>(repeating: .greatestFiniteMagnitude)
+        var high = SIMD2<Float>(repeating: -.greatestFiniteMagnitude)
+        for letter in placed {
+            let a = letter.transform * SIMD4<Float>(letter.bbLeftX, letter.bbBottomY, 0, 1)
+            let b = letter.transform * SIMD4<Float>(letter.bbRightX, letter.bbTopY, 0, 1)
+            low = simd_min(low, simd_min(SIMD2(a.x, a.y), SIMD2(b.x, b.y)))
+            high = simd_max(high, simd_max(SIMD2(a.x, a.y), SIMD2(b.x, b.y)))
+        }
+        return (low, high)
+    }
+
+    /// World-space centre of the letters on stage; the origin when empty.
+    var wordCenter: SIMD3<Float> {
+        guard let bounds = wordBounds else { return .zero }
+        let centre = (bounds.min + bounds.max) / 2
+        return SIMD3<Float>(centre.x, centre.y, 0)
+    }
+
     func getLetterTransforms() -> [simd_float4x4] {
         return lettersOnStage.map { $0.transform }
     }
     
-    func update(deltaTime: Float) {
-        updateLinearTransforms(deltaTime: deltaTime)
-    }
-        
-    private func calculateLinearWidth() -> Float {
-        guard !lettersOnStage.isEmpty else { return 0 }
-        
-        let totalLetterWidth = lettersOnStage.reduce(0) { $0 + $1.width }
-        let totalSpacing = Float(lettersOnStage.count - 1) * config.letterSpacing
-        return totalLetterWidth + totalSpacing
-    }
-        
-    private func createLinearTransform(initialPositionX: Float, initialPositionY: Float = 0.0) {
-        let totalWidth = calculateLinearWidth()
-        var currentX: Float = initialPositionX - totalWidth / 2
-        
-        if totalWidth >= config.maxLinearWidth {
-            currentX = -totalWidth
-            shouldAnimateLayout = true
-        } else {
-            shouldAnimateLayout = false
-        }
-        
-        layoutBondingBox = CGRect(x: CGFloat(currentX), y: 0, width: CGFloat(totalWidth), height: 0.0)
-        for letter in lettersOnStage {
+    /// Greedy word wrap. Words are runs of glyphs separated by blanks; a word
+    /// moves to the next line when it would overflow `maxWidth`, and a word
+    /// wider than `maxWidth` on its own gets a line to itself. Lines are centred
+    /// horizontally, the stack is centred vertically on the origin, and one
+    /// uniform scale shrinks the block if it still doesn't fit.
+    private func createWrappedTransform(maxWidth: Float, maxHeight: Float) {
+        // Indices into lettersOnStage, grouped into words.
+        var words: [[Int]] = [[]]
+        for (index, letter) in lettersOnStage.enumerated() {
             if letter.mesh == nil {
-                currentX += config.blankSpaceWidth
-                continue
+                if !words[words.count - 1].isEmpty { words.append([]) }
+            } else {
+                words[words.count - 1].append(index)
             }
-            var transform = matrix_identity_float4x4
-            // Offset by -bbLeftX so the letter's visual left edge aligns with currentX
-            transform.columns.3.x = currentX - letter.bbLeftX
-            transform.columns.3.y = initialPositionY
-            
-            letter.transform = transform
-            currentX += letter.width + config.letterSpacing
+        }
+        words.removeAll { $0.isEmpty }
+        guard !words.isEmpty else { return }
+
+        func width(of word: [Int]) -> Float {
+            let glyphs = word.reduce(0) { $0 + lettersOnStage[$1].width }
+            return glyphs + Float(word.count - 1) * config.letterSpacing
+        }
+        let wordGap = config.blankSpaceWidth + config.letterSpacing
+
+        var lines: [(words: [[Int]], width: Float)] = []
+        for word in words {
+            let wordWidth = width(of: word)
+            if let last = lines.last, last.width + wordGap + wordWidth <= maxWidth {
+                lines[lines.count - 1].words.append(word)
+                lines[lines.count - 1].width += wordGap + wordWidth
+            } else {
+                lines.append((words: [word], width: wordWidth))
+            }
+        }
+
+        // One shared glyph band for every line, so baselines stay evenly spaced
+        // regardless of which letters a line happens to contain.
+        let placed = words.flatMap { $0 }.map { lettersOnStage[$0] }
+        let bandTop = placed.map(\.bbTopY).max()!
+        let bandBottom = placed.map(\.bbBottomY).min()!
+        let lineAdvance = (bandTop - bandBottom) + config.lineSpacing
+
+        let blockWidth = lines.map(\.width).max()!
+        let blockHeight = Float(lines.count) * lineAdvance - config.lineSpacing
+        let scale = min(1, maxWidth / blockWidth, maxHeight / blockHeight)
+
+        for (lineIndex, line) in lines.enumerated() {
+            let lineTop = blockHeight / 2 - Float(lineIndex) * lineAdvance
+            var currentX = -line.width / 2
+            for word in line.words {
+                for index in word {
+                    let letter = lettersOnStage[index]
+                    var transform = matrix_identity_float4x4
+                    transform.columns.0.x = scale
+                    transform.columns.1.y = scale
+                    transform.columns.2.z = scale
+                    transform.columns.3.x = (currentX - letter.bbLeftX) * scale
+                    transform.columns.3.y = (lineTop - bandTop) * scale
+                    letter.transform = transform
+                    currentX += letter.width + config.letterSpacing
+                }
+                currentX += config.blankSpaceWidth
+            }
         }
     }
-   
+
+    /// Clears the stage but keeps the parsed glyph cache — re-parsing the OBJ
+    /// files is the expensive part of showing a word.
     func cleanStageLetters() {
         lettersOnStage.removeAll()
-        letters.removeAll()
-    }
-    
-    private func updateLinearTransforms(deltaTime: Float) {
-        if(!shouldAnimateLayout) {
-            return
-        }
-        time += deltaTime * config.speed
-        acceleration = abs(cos(time))
-        animationAmout = (acceleration * slideDirection)
-        for i in 0..<lettersOnStage.count {
-            var transform = lettersOnStage[i].transform
-            transform.columns.3.x += animationAmout
-            lettersOnStage[i].transform = transform
-        }
-        layoutBondingBox.origin.x += CGFloat(animationAmout)
-        
-        // -- 0 is the middle point in z,y,z coodinate system
-        if(layoutBondingBox.origin.x > 0) {
-            slideDirection = -1
-        }
-        
-        if(layoutBondingBox.origin.x + layoutBondingBox.width < 0) {
-            slideDirection = 1
-        }
     }
 }

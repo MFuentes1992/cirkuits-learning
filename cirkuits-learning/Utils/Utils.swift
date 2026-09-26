@@ -12,16 +12,23 @@ enum stringUtils: String {
     case backSlash = "/"
 }
 
+/// Depth buffer format, shared by the `MTKView`, every render pipeline and the
+/// depth-stencil state. Metal validates that a pipeline's depth attachment
+/// format matches the render pass it runs in, so all three must agree — keeping
+/// the value here is what stops them drifting.
+let depthPixelFormat: MTLPixelFormat = .depth32Float
+
 func makeDefaultRenderPipeline(device: MTLDevice, vertexName: String, fragmentName: String) -> MTLRenderPipelineState {
     let pipelineState: MTLRenderPipelineState!
     let library = device.makeDefaultLibrary()!
     let vertexFunction = library.makeFunction(name: vertexName)!
     let fragmentFunction = library.makeFunction(name: fragmentName)!
-    
+
     let pipelineDescriptor = MTLRenderPipelineDescriptor()
     pipelineDescriptor.vertexFunction = vertexFunction
     pipelineDescriptor.fragmentFunction = fragmentFunction
     pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+    pipelineDescriptor.depthAttachmentPixelFormat = depthPixelFormat
     // -- First attribute is position
     let vertexDescriptor = MTLVertexDescriptor()
     vertexDescriptor.attributes[0].format = .float3
@@ -55,6 +62,7 @@ func makeObjectRenderPipeline(device: MTLDevice, vertexName: String, fragmentNam
     pipelineDescriptor.vertexFunction = vertexFunction
     pipelineDescriptor.fragmentFunction = fragmentFunction
     pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+    pipelineDescriptor.depthAttachmentPixelFormat = depthPixelFormat
     // -- First attribute is position
     let vertexDescriptor = MTLVertexDescriptor()
     vertexDescriptor.attributes[0].format = .float3

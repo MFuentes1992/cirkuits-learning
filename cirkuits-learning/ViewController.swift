@@ -22,19 +22,16 @@ class ViewController: UIViewController {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal no es compatible con este dispositivo")
         }
-
-        // Patterned background sits behind a transparent Metal view so the
-        // 3D letters render on top of it.
-        backgroundView = SwirlPatternView(style: .navy)
-        backgroundView.frame = view.bounds
-        backgroundView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.addSubview(backgroundView)
-
         metalView = MTKView(frame: view.bounds, device: device)
         metalView.device = device
         metalView.isOpaque = false
         metalView.backgroundColor = .clear
         metalView.clearColor = MTLClearColorMake(0, 0, 0, 0)
+        // Without a depth buffer, triangles land in submission order and the
+        // back of an extruded letter paints over its front — the letters read
+        // as hollow. MTKView allocates and clears the texture once this is set.
+        metalView.depthStencilPixelFormat = depthPixelFormat
+        metalView.clearDepth = 1.0
         view.addSubview(metalView)
 
         renderer = Renderer(device: device, view: metalView)

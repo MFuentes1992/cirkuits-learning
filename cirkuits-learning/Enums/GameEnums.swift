@@ -42,6 +42,7 @@ enum GameScenes {
     case CountDown
     case Igniter
     case GameOver
+    case Sandbox
 }
 
 enum PlayerState {

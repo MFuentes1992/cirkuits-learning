@@ -57,6 +57,8 @@ class SceneManager {
                                     self.gameState.reset()
                                     self.setCurrentScene(scene: scene)
                                 })
+        case .Sandbox:
+            tmp = Sandbox(device: self.device, view: view)
         }
         currentScene = tmp
         let levelConfig = LevelConfig(timeToLive: 2.5, timeToAnswer: 2.5, levelDuration: 30, lives: 3, levelCountDown: 3, stage: 1)
@@ -66,7 +68,7 @@ class SceneManager {
         self.gameState.Lives = levelConfig.lives
         self.gameState.CountDown = Double(levelConfig.levelCountDown)
         self.gameState.Stage = levelConfig.stage
-        self.gameState.StreakGoal = 3
+        self.gameState.StreakGoal = 5
         self.gameState.ConfigLoaded = true
         currentScene.play()
     }
