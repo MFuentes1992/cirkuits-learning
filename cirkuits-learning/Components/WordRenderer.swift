@@ -35,12 +35,20 @@ class WordRenderer {
     /// World-space centre of the word currently on stage, for framing a camera.
     var wordCenter: SIMD3<Float> { layoutManager.wordCenter }
 
+    /// World-space bounds of the word currently on stage; nil when empty.
+    var wordBounds: (min: SIMD2<Float>, max: SIMD2<Float>)? { layoutManager.wordBounds }
 
-    init(device: MTLDevice,
-         screenWidth: Float) {
+    /// How the next `CurrentFoo` is laid out.
+    var layoutMode: LayoutMode {
+        get { layoutManager.layoutMode }
+        set { layoutManager.layoutMode = newValue }
+    }
+
+
+    init(device: MTLDevice) {
         self.device = device
         
-        let config = WordLayoutConfig(screenWidth: screenWidth)
+        let config = WordLayoutConfig()
         self.layoutManager = WordLayoutManager(config: config, device: device)
         pipelineState = makeObjectRenderPipeline(device: device, vertexName: "obj_vertex_shader", fragmentName: "obj_fragment_shader")
         setupUniformBuffer()
@@ -51,10 +59,6 @@ class WordRenderer {
         uniformBuffer = device.makeBuffer(length: uniformsSize, options: [.storageModeShared])
     }
     
-    func update(deltaTime: Float) {
-        layoutManager.update(deltaTime: deltaTime)
-    }
-   
     func cleanUp() {
         layoutManager.cleanStageLetters()
     }

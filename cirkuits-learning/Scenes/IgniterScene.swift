@@ -51,6 +51,17 @@ class IgniterScene: SceneProtocol {
         Self.streakMultipliers[min(streakChain, Self.streakMultipliers.count - 1)]
     }
 
+    /// How long the correct / missed feedback holds before the next word.
+    private let feedbackDuration: Double = 1.1
+    /// Plays over the feedback window instead of the word just vanishing.
+    private let exitAnimation = WordExitAnimation()
+
+    /// Fraction of the visible frustum the word may fill, leaving a border.
+    private let framingMargin: Float = 0.85
+    /// Aspect and HUD word area (top, bottom) the current layout was fitted
+    /// for; a change triggers a re-layout.
+    private var fittedFor: SIMD3<Float>?
+
     var meshPipeLine: MTLRenderPipelineState!
     var lastPanLocation: CGPoint = .zero
 
@@ -144,7 +155,7 @@ class IgniterScene: SceneProtocol {
             center: SIMD3<Float>(0,0,0),
             up: SIMD3<Float>(0,1,0),
             fovDegrees: 60.0,
-            aspectRatio: 19.5/9,
+            aspectRatio: viewAspect(view) ?? 9/19.5,
             nearZ: 1.0,
             farZ: 1000.0)
         let wordsPerStage = igniterStageMapping(stage: String(gameState.Stage)) ?? 1
@@ -154,8 +165,69 @@ class IgniterScene: SceneProtocol {
             WordFoos.append(WordFoo(Word: sentence, Reward: Int.random(in: 1...9)))
         }
         camera = Camera(settings: cameraSettings)
-        wordRenderer = WordRenderer(device: device, screenWidth: Float(view.bounds.width))
+        wordRenderer = WordRenderer(device: device)
+        fitLayout(view: view)
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
+
+        // Leave a beat at the end of the window so the next word doesn't pop in
+        // the same frame the last letter clears the camera.
+        exitAnimation.maxTotalDuration = Float(feedbackDuration) - 0.1
+        wordRenderer.letterTransformModifier = { [weak self] index, letter, layout in
+            guard let self else { return layout }
+            let toEye = self.camera.settings.eye - self.camera.settings.center
+            return self.exitAnimation.transform(
+                index: index, letter: letter, layout: layout,
+                toEye: normalize(toEye), travel: simd_length(toEye) + 60)
+        }
+    }
+
+    /// Width over height of the drawable, falling back to the view's bounds
+    /// before the drawable has been sized. Nil if neither is known yet.
+    private func viewAspect(_ view: MTKView) -> Float? {
+        let size = view.drawableSize.height > 0 ? view.drawableSize : view.bounds.size
+        guard size.height > 0 else { return nil }
+        return Float(size.width / size.height)
+    }
+
+    /// What the layout depends on: the view's aspect and the HUD's word area.
+    private func fitKey(_ view: MTKView) -> SIMD3<Float>? {
+        guard let aspect = viewAspect(view) else { return nil }
+        let area = hud.wordArea
+        return SIMD3<Float>(aspect, Float(area.top), Float(area.bottom))
+    }
+
+    /// Height of the frustum slice at the text plane (z = 0), in world units.
+    private var visibleHeight: Float {
+        let distance = simd_length(camera.settings.eye - camera.settings.center)
+        return 2 * distance * tan(radians_from_degrees(camera.settings.fovDegrees) / 2)
+    }
+
+    /// Wraps and scales words to the frustum width and the HUD's word area, so
+    /// a phrase always fits between the progress dots and the streak gauge.
+    private func fitLayout(view: MTKView) {
+        guard let key = fitKey(view) else { return }
+        fittedFor = key
+        let aspect = key.x
+        camera.settings.aspectRatio = aspect
+
+        let screenHeight = Float(view.bounds.height)
+        let areaFraction = screenHeight > 0 ? (key.z - key.y) / screenHeight : 1
+        wordRenderer.layoutMode = .wrapped(
+            maxWidth: visibleHeight * aspect * framingMargin,
+            maxHeight: visibleHeight * min(framingMargin, areaFraction))
+    }
+
+    /// Slides the camera straight up or down so the word's top edge lands on
+    /// the top of the HUD's word area. Only the height changes, so the exit
+    /// animation still flies straight at the viewer.
+    private func frameWord(view: MTKView) {
+        let screenHeight = Float(view.bounds.height)
+        guard let bounds = wordRenderer.wordBounds, screenHeight > 0 else { return }
+        // Where the area's top sits in normalised device coordinates (+1 = top).
+        let areaTopNDC = 1 - 2 * Float(hud.wordArea.top) / screenHeight
+        let y = bounds.max.y - visibleHeight / 2 * areaTopNDC
+        camera.settings.eye.y = y
+        camera.settings.center.y = y
     }
     
     /// Places the official Igniter backdrop directly beneath the transparent
@@ -202,10 +274,17 @@ class IgniterScene: SceneProtocol {
         }
         score += earned
         currentFooIndex = (currentFooIndex + 1) % WordFoos.count //
+        exitAnimation.stop()
         wordRenderer.CurrentFoo = WordFoos[currentFooIndex]
         gameState.AnswersBucket = []
     }
     
+    /// Starts the letters flying out on the first frame of a feedback window.
+    private func startExitIfNeeded() {
+        guard !exitAnimation.isRunning else { return }
+        exitAnimation.start(letterCount: WordFoos[currentFooIndex].Word.count)
+    }
+
     func resetTimers() {
         wordStartSec = gameState.Timer.getElapsedTime()
         timeToAnswer = 0
@@ -247,8 +326,8 @@ class IgniterScene: SceneProtocol {
                     checkMarkTime = gameState.Timer.getElapsedTime()
                 }
             case .Correct:
-                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
-                if gameState.Timer.getElapsedTime() - checkMarkTime >= 1.1 {
+                startExitIfNeeded()
+                if gameState.Timer.getElapsedTime() - checkMarkTime >= feedbackDuration {
                     gameState.PlayerState = .Idle
                     nextFoo(reward: WordFoos[currentFooIndex].Reward)
                     resetTimers()
@@ -258,8 +337,8 @@ class IgniterScene: SceneProtocol {
                     speechRecognition.pause()
                 }
             case .Wrong:
-                wordRenderer.CurrentFoo = WordFoo(Word: "", Reward: 0)
-                if gameState.Timer.getElapsedTime() - switchTime >= 1.1 {
+                startExitIfNeeded()
+                if gameState.Timer.getElapsedTime() - switchTime >= feedbackDuration {
                     nextFoo(reward: 0)
                     resetTimers()
                     streakChain = 0
@@ -297,6 +376,12 @@ class IgniterScene: SceneProtocol {
             gameState.Score = Int(score)
             gameState.MaxStreak = streakChain
         }
+        if let key = fitKey(view), key != fittedFor {
+            fitLayout(view: view)
+            // Re-assigning re-runs the layout for whatever is on stage.
+            wordRenderer.CurrentFoo = wordRenderer.CurrentFoo
+        }
+        frameWord(view: view)
         wordRenderer.render(encoder: encoder, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix)
     }
 }

@@ -36,6 +36,22 @@ class IgniterHUD {
     private var levelRemainingTime: TimeInterval
 
     private let buttonDiameter: CGFloat = 56
+    private let dotsTopInset: CGFloat = 14
+    private let dotsHeight: CGFloat = 16
+    private let gaugeBottomInset: CGFloat = 40
+    private let gaugeHeight: CGFloat = 210
+    /// Clear space between the progress dots and the top of the 3D word.
+    private let wordTopGap: CGFloat = 60
+
+    /// Vertical band of `parentView` (points, top-down) the 3D word may fill:
+    /// from `wordTopGap` below the progress dots to the top of the streak gauge.
+    /// Read from the safe area live, since it's zero until the view is in a window.
+    var wordArea: (top: CGFloat, bottom: CGFloat) {
+        let insets = parentView.safeAreaInsets
+        let top = insets.top + dotsTopInset + dotsHeight + wordTopGap
+        let bottom = parentView.bounds.height - insets.bottom - gaugeBottomInset - gaugeHeight
+        return (top, max(top, bottom))
+    }
 
     init(parentView: UIView, gameState: GameState, speechRecognizer: SpeechRecognizer? = nil) {
         self.gameState = gameState
@@ -116,20 +132,20 @@ class IgniterHUD {
             fireBorder.heightAnchor.constraint(equalToConstant: 340),
 
             // Progress dots across the top.
-            progressDots.topAnchor.constraint(equalTo: guide.topAnchor, constant: 14),
+            progressDots.topAnchor.constraint(equalTo: guide.topAnchor, constant: dotsTopInset),
             progressDots.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 28),
             progressDots.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -28),
-            progressDots.heightAnchor.constraint(equalToConstant: 16),
+            progressDots.heightAnchor.constraint(equalToConstant: dotsHeight),
 
             // Streak funnel, bottom-left.
             comboGauge.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 10),
-            comboGauge.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -100),
+            comboGauge.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -gaugeBottomInset),
             comboGauge.widthAnchor.constraint(equalToConstant: 220),
-            comboGauge.heightAnchor.constraint(equalToConstant: 210),
+            comboGauge.heightAnchor.constraint(equalToConstant: gaugeHeight),
 
             // Buttons, bottom-right.
             pauseButton.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -20),
-            pauseButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -120),
+            pauseButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -60),
             pauseButton.widthAnchor.constraint(equalToConstant: buttonDiameter),
             pauseButton.heightAnchor.constraint(equalToConstant: buttonDiameter),
 

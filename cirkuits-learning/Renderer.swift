@@ -35,7 +35,7 @@ class Renderer:NSObject, MTKViewDelegate {
         gameState = GameState(gameState: .stop, timer: timer)
        //  self.hudController = HudController(parentView: view, gameState: gameState)
         sceneManager = SceneManager(device: device, view: view, gameState: self.gameState)
-        sceneManager.setCurrentScene(scene: .Sandbox)
+        sceneManager.setCurrentScene(scene: .Menu)
         super.init()
     }
     
